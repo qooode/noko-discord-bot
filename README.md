@@ -151,6 +151,9 @@ tail -f bot.log
 ### **Context Menu Commands** (Right-click)
 - **"Quick Trakt Info"** - Right-click any message to extract show/movie info
 
+### **Help & Discovery**
+- `/help` - **Complete command guide** with examples and getting started tips
+
 ## 🎮 Interactive Features
 
 ### **Search Interface**

@@ -955,6 +955,194 @@ async def view_stats(interaction: discord.Interaction):
     embed.set_footer(text="Stats based on recent activity and connected account")
     await interaction.followup.send(embed=embed)
 
+@bot.tree.command(name="search", description="Search for shows or movies with interactive results")
+@app_commands.describe(query="What to search for (show or movie name)")
+@app_commands.autocomplete(query=content_autocomplete)
+async def search_content(interaction: discord.Interaction, query: str):
+    """Search for shows or movies with enhanced interactive interface."""
+    await interaction.response.defer()
+    
+    results = trakt_api.search_content(query)
+    
+    if not results:
+        await interaction.followup.send(f"❌ No results found for '{query}'")
+        return
+    
+    # Create interactive search view
+    view = SearchView(results, query, interaction.user.id)
+    embed = view.get_embed()
+    
+    await interaction.followup.send(embed=embed, view=view)
+
+@bot.tree.command(name="quick_action", description="Quick actions for shows/movies")
+@app_commands.describe(
+    content="Show or movie name",
+    action="What to do with it"
+)
+@app_commands.autocomplete(content=content_autocomplete)
+@app_commands.choices(action=[
+    app_commands.Choice(name="Mark as Watched", value="watched"),
+    app_commands.Choice(name="Add to Watchlist", value="watchlist"),
+    app_commands.Choice(name="Set Reminder", value="remind"),
+    app_commands.Choice(name="Get Info", value="info")
+])
+async def quick_action(interaction: discord.Interaction, content: str, action: str):
+    """Perform quick actions on content."""
+    await interaction.response.defer()
+    
+    user = db.get_user(str(interaction.user.id))
+    if not user and action != "info":
+        await interaction.followup.send("❌ Connect your Trakt.tv account first with `/connect`")
+        return
+    
+    # Search for content
+    results = trakt_api.search_content(content)
+    if not results:
+        await interaction.followup.send(f"❌ No results found for '{content}'")
+        return
+    
+    # Get the first result
+    result = results[0]
+    content_obj = result.get('show') or result.get('movie')
+    content_type = 'show' if 'show' in result else 'movie'
+    content_id = str(content_obj['ids']['trakt'])
+    
+    if action == "watched":
+        success = trakt_api.mark_as_watched(user['access_token'], content_type, content_id)
+        if success:
+            embed = discord.Embed(
+                title="✅ Marked as Watched",
+                description=f"**{content_obj['title']}** has been marked as watched!",
+                color=0x00ff00
+            )
+        else:
+            embed = discord.Embed(title="❌ Failed", description="Could not mark as watched", color=0xff0000)
+    
+    elif action == "watchlist":
+        success = trakt_api.add_to_watchlist(user['access_token'], content_type, content_id)
+        if success:
+            embed = discord.Embed(
+                title="✅ Added to Watchlist",
+                description=f"**{content_obj['title']}** has been added to your watchlist!",
+                color=0x00ff00
+            )
+        else:
+            embed = discord.Embed(title="❌ Failed", description="Could not add to watchlist", color=0xff0000)
+    
+    elif action == "remind":
+        if content_type != 'show':
+            await interaction.followup.send("❌ Reminders are only available for TV shows!")
+            return
+        
+        # Show enhanced reminder modal
+        modal = ReminderModal(content_id, content_obj['title'])
+        await interaction.followup.send("Click the button below to set reminder preferences:", 
+                                      view=ReminderButtonView(modal))
+        return
+    
+    elif action == "info":
+        if content_type == 'show':
+            detailed_info = trakt_api.get_show_info(content_id)
+        else:
+            detailed_info = trakt_api.get_movie_info(content_id)
+        
+        if detailed_info:
+            embed = discord.Embed(
+                title=f"{detailed_info['title']} ({detailed_info.get('year', 'N/A')})",
+                description=detailed_info.get('overview', 'No description available'),
+                color=0x0099ff
+            )
+            embed.add_field(name="Type", value=content_type.title(), inline=True)
+            embed.add_field(name="Rating", value=f"⭐ {detailed_info.get('rating', 0)}/10", inline=True)
+            embed.add_field(name="Runtime", value=f"{detailed_info.get('runtime', 'N/A')} min", inline=True)
+            
+            # Add action buttons
+            view = ContentActionView(result, interaction.user.id)
+            await interaction.followup.send(embed=embed, view=view)
+            return
+        else:
+            embed = discord.Embed(title="❌ Failed", description="Could not get info", color=0xff0000)
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="help", description="Show all available commands and how to use them")
+async def help_command(interaction: discord.Interaction):
+    """Show comprehensive help information."""
+    embed = discord.Embed(
+        title=f"🤖 {config.BOT_NAME} - Help & Commands",
+        description="**Advanced Discord bot for Trakt.tv management**",
+        color=0x0099ff
+    )
+    
+    # Account Management
+    embed.add_field(
+        name="🔐 Account Management",
+        value="`/connect` - Link your Trakt.tv account\n"
+              "`/public` - Make profile public\n"
+              "`/private` - Make profile private\n"
+              "`/stats` - View your statistics",
+        inline=False
+    )
+    
+    # Content Discovery
+    embed.add_field(
+        name="🔍 Content Discovery",
+        value="`/search <query>` - Interactive search with buttons\n"
+              "`/info <show/movie>` - Detailed info with actions\n"
+              "`/quick_action <content> <action>` - One-command workflow",
+        inline=False
+    )
+    
+    # Content Management
+    embed.add_field(
+        name="🎬 Content Management",
+        value="`/watched <show/movie>` - Mark as watched\n"
+              "`/unwatch <show/movie>` - Remove from watched\n"
+              "`/watchlist <show/movie>` - Add to watchlist",
+        inline=False
+    )
+    
+    # Reminders
+    embed.add_field(
+        name="🔔 Reminders",
+        value="`/remind <show>` - Set custom episode reminders\n"
+              "`/unremind <show>` - Remove reminders\n"
+              "`/reminders` - List all your reminders",
+        inline=False
+    )
+    
+    # Social Features
+    embed.add_field(
+        name="👥 Social Features",
+        value="`/watching [user]` - See current watching activity\n"
+              "`/last [user] [count]` - Recent watches (1-10 items)",
+        inline=False
+    )
+    
+    # Special Features
+    embed.add_field(
+        name="✨ Special Features",
+        value="**Right-click** any message → `Quick Trakt Info`\n"
+              "**Autocomplete** - Shows suggest as you type\n"
+              "**Interactive Buttons** - One-click actions\n"
+              "**Custom Modals** - Rich reminder settings",
+        inline=False
+    )
+    
+    # Getting Started
+    embed.add_field(
+        name="🚀 Getting Started",
+        value="1. Use `/connect` to link your Trakt.tv account\n"
+              "2. Try `/search Breaking Bad` for interactive search\n"
+              "3. Use `/public` to enable social features\n"
+              "4. Set reminders with `/remind <show name>`",
+        inline=False
+    )
+    
+    embed.set_footer(text="💡 Tip: All commands have autocomplete - just start typing!")
+    
+    await interaction.response.send_message(embed=embed)
+
 @tasks.loop(hours=6)  # Check every 6 hours
 async def check_reminders():
     """Check for new episodes and send reminders."""
