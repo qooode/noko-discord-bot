@@ -55,5 +55,8 @@ commands.init_commands(bot, trakt_api, db)
 social.init_social(bot, trakt_api, db)
 management.init_management(bot, trakt_api, db)
 
+# Register error handler
+commands.register_error_handler()
+
 if __name__ == "__main__":
     bot.run(config.DISCORD_TOKEN) 
