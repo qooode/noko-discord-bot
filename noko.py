@@ -468,37 +468,51 @@ class ShowProgressView(discord.ui.View):
         )
         
         if progress_data:
-            # Show detailed progress
-            completed = progress_data.get('completed', 0)
-            total = progress_data.get('episodes', 0)
-            percentage = (completed / total * 100) if total > 0 else 0
-            
-            embed.add_field(
-                name="📊 Overall Progress",
-                value=f"**{completed}/{total} episodes** ({percentage:.1f}%)\n"
-                      f"{'🟩' * int(percentage // 10)}{'⬜' * (10 - int(percentage // 10))}",
-                inline=False
-            )
-            
-            # Show season progress
-            seasons = progress_data.get('seasons', [])
-            if seasons:
-                season_text = ""
-                for season in seasons[:5]:  # Show first 5 seasons
-                    season_num = season['number']
-                    s_completed = season.get('completed', 0)
-                    s_total = season.get('episodes', 0)
-                    s_percentage = (s_completed / s_total * 100) if s_total > 0 else 0
-                    
-                    status = "✅" if s_completed == s_total else "🔄" if s_completed > 0 else "⭕"
-                    season_text += f"{status} **Season {season_num}**: {s_completed}/{s_total} ({s_percentage:.0f}%)\n"
-                
-                if len(seasons) > 5:
-                    season_text += f"*...and {len(seasons) - 5} more seasons*"
+            try:
+                # Show detailed progress
+                completed = progress_data.get('completed', 0)
+                total = progress_data.get('episodes', 0)
+                percentage = (completed / total * 100) if total > 0 else 0
                 
                 embed.add_field(
-                    name="🎬 Season Progress",
-                    value=season_text,
+                    name="📊 Overall Progress",
+                    value=f"**{completed}/{total} episodes** ({percentage:.1f}%)\n"
+                          f"{'🟩' * int(percentage // 10)}{'⬜' * (10 - int(percentage // 10))}",
+                    inline=False
+                )
+                
+                # Show season progress
+                seasons = progress_data.get('seasons', [])
+                if seasons:
+                    season_text = ""
+                    for season in seasons[:5]:  # Show first 5 seasons
+                        try:
+                            season_num = season.get('number', 0)
+                            s_completed = season.get('completed', 0)
+                            s_episodes = season.get('episodes', [])
+                            s_total = len(s_episodes) if isinstance(s_episodes, list) else (s_episodes if isinstance(s_episodes, int) else 0)
+                            s_percentage = (s_completed / s_total * 100) if s_total > 0 else 0
+                            
+                            status = "✅" if s_completed == s_total else "🔄" if s_completed > 0 else "⭕"
+                            season_text += f"{status} **Season {season_num}**: {s_completed}/{s_total} ({s_percentage:.0f}%)\n"
+                        except Exception as e:
+                            print(f"Error processing season data: {e}")
+                            continue
+                    
+                    if len(seasons) > 5:
+                        season_text += f"*...and {len(seasons) - 5} more seasons*"
+                    
+                    if season_text:  # Only add field if we have valid season data
+                        embed.add_field(
+                            name="🎬 Season Progress",
+                            value=season_text,
+                            inline=False
+                        )
+            except Exception as e:
+                print(f"Error processing progress data: {e}")
+                embed.add_field(
+                    name="📊 Progress",
+                    value="❌ Error loading progress data",
                     inline=False
                 )
         else:
@@ -509,10 +523,13 @@ class ShowProgressView(discord.ui.View):
             )
         
         # Add poster
-        tmdb_id = self.show.get('ids', {}).get('tmdb')
-        if tmdb_id:
-            poster_url = f"https://image.tmdb.org/t/p/w300/{tmdb_id}.jpg"
-            embed.set_thumbnail(url=poster_url)
+        try:
+            tmdb_id = self.show.get('ids', {}).get('tmdb')
+            if tmdb_id:
+                poster_url = f"https://image.tmdb.org/t/p/w300/{tmdb_id}.jpg"
+                embed.set_thumbnail(url=poster_url)
+        except:
+            pass  # Fail silently for poster issues
         
         return embed
     
@@ -524,11 +541,20 @@ class ShowProgressView(discord.ui.View):
         
         await interaction.response.defer()
         
-        # Get detailed progress
-        progress = trakt_api.get_show_progress(self.access_token, self.show_id)
-        embed = self.get_progress_embed(progress)
-        
-        await interaction.followup.edit_message(interaction.message.id, embed=embed, view=self)
+        try:
+            # Get detailed progress
+            progress = trakt_api.get_show_progress(self.access_token, self.show_id)
+            embed = self.get_progress_embed(progress)
+            
+            await interaction.followup.edit_message(interaction.message.id, embed=embed, view=self)
+        except Exception as e:
+            print(f"Error getting progress: {e}")
+            embed = discord.Embed(
+                title="❌ Error Loading Progress",
+                description="Could not load progress data. This might be because you haven't watched any episodes yet or the show data is incomplete.",
+                color=0xff0000
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
     
     @discord.ui.button(label='🎭 Manage Seasons', style=discord.ButtonStyle.secondary)
     async def manage_seasons(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -611,7 +637,8 @@ class SeasonSelectView(discord.ui.View):
             if season['number'] == 0:  # Skip specials for now
                 continue
             
-            episode_count = len(season.get('episodes', []))
+            episodes = season.get('episodes', [])
+            episode_count = len(episodes) if isinstance(episodes, list) else episodes
             options.append(discord.SelectOption(
                 label=f"Season {season['number']}",
                 description=f"{episode_count} episodes",
@@ -639,7 +666,8 @@ class SeasonSelectView(discord.ui.View):
             if season['number'] == 0:  # Skip specials
                 continue
             
-            episode_count = len(season.get('episodes', []))
+            episodes = season.get('episodes', [])
+            episode_count = len(episodes) if isinstance(episodes, list) else episodes
             season_text += f"**Season {season['number']}**: {episode_count} episodes\n"
         
         embed.add_field(
@@ -2208,61 +2236,146 @@ async def continue_watching(interaction: discord.Interaction):
         await interaction.followup.send("❌ You need to connect your Trakt.tv account first. Use `/connect`")
         return
     
-    # Get user's watching progress for all shows
     try:
-        response = requests.get(
+        # Get user's collection and watching history to find partially watched shows
+        continue_options = []
+        
+        # Method 1: Check user's collection for shows they've started
+        collection_response = requests.get(
+            f"{trakt_api.base_url}/users/me/collection/shows?extended=full",
+            headers=trakt_api.get_headers(user['access_token'])
+        )
+        
+        # Method 2: Also check watched shows (might be partially complete)
+        watched_response = requests.get(
             f"{trakt_api.base_url}/users/me/watched/shows?extended=full",
             headers=trakt_api.get_headers(user['access_token'])
         )
         
-        if response.status_code != 200:
-            await interaction.followup.send("❌ Could not fetch your watching progress.")
-            return
+        # Method 3: Get user's history to find recently watched episodes
+        history_response = requests.get(
+            f"{trakt_api.base_url}/users/me/history/shows?limit=50",
+            headers=trakt_api.get_headers(user['access_token'])
+        )
         
-        watched_shows = response.json()
+        all_shows = set()
         
-        # Find shows that are in progress (not fully watched)
-        continue_options = []
+        # Collect shows from collection
+        if collection_response.status_code == 200:
+            collection_shows = collection_response.json()
+            for item in collection_shows:
+                show = item.get('show', {})
+                if show.get('ids', {}).get('trakt'):
+                    all_shows.add(str(show['ids']['trakt']))
         
-        for watched_show in watched_shows[:10]:  # Limit to avoid too much data
-            show = watched_show['show']
-            show_id = str(show['ids']['trakt'])
-            
-            # Get detailed progress
-            progress = trakt_api.get_show_progress(user['access_token'], show_id)
-            if progress:
-                completed = progress.get('completed', 0)
-                total = progress.get('episodes', 0)
+        # Collect shows from watched (some might be partial)
+        if watched_response.status_code == 200:
+            watched_shows = watched_response.json()
+            for item in watched_shows:
+                show = item.get('show', {})
+                if show.get('ids', {}).get('trakt'):
+                    all_shows.add(str(show['ids']['trakt']))
+        
+        # Collect shows from history
+        if history_response.status_code == 200:
+            history_items = history_response.json()
+            for item in history_items:
+                show = item.get('show', {})
+                if show.get('ids', {}).get('trakt'):
+                    all_shows.add(str(show['ids']['trakt']))
+        
+        print(f"Found {len(all_shows)} unique shows to check for progress")
+        
+        # Now check progress for each show to find partially watched ones
+        for show_id in list(all_shows)[:20]:  # Limit to 20 shows to avoid rate limits
+            try:
+                # Get show details first
+                show_info = trakt_api.get_show_info(show_id)
+                if not show_info:
+                    continue
                 
-                # Only include shows that are partially watched
-                if 0 < completed < total:
-                    continue_options.append({
-                        'show': show,
-                        'progress': progress,
-                        'completed': completed,
-                        'total': total,
-                        'percentage': (completed / total * 100) if total > 0 else 0
-                    })
+                # Get detailed progress
+                progress = trakt_api.get_show_progress(user['access_token'], show_id)
+                if progress:
+                    completed = progress.get('completed', 0)
+                    total_episodes = progress.get('episodes', 0)
+                    
+                    # Include shows that have some progress but aren't complete
+                    if completed > 0 and completed < total_episodes:
+                        continue_options.append({
+                            'show': show_info,
+                            'progress': progress,
+                            'completed': completed,
+                            'total': total_episodes,
+                            'percentage': (completed / total_episodes * 100) if total_episodes > 0 else 0
+                        })
+                        print(f"Added {show_info['title']}: {completed}/{total_episodes}")
+                    
+                    # Also include shows with recent activity (last 30 days) even if "complete"
+                    seasons = progress.get('seasons', [])
+                    for season in seasons:
+                        if isinstance(season.get('episodes'), list):
+                            for episode in season['episodes']:
+                                if episode.get('last_watched_at'):
+                                    # Parse the date and check if it's recent
+                                    from datetime import datetime
+                                    try:
+                                        watched_date = datetime.fromisoformat(episode['last_watched_at'].replace('Z', '+00:00'))
+                                        days_ago = (datetime.now().replace(tzinfo=watched_date.tzinfo) - watched_date).days
+                                        if days_ago <= 30:  # Watched in last 30 days
+                                            # Check if there are unwatched episodes
+                                            next_episode = progress.get('next_episode')
+                                            if next_episode:
+                                                continue_options.append({
+                                                    'show': show_info,
+                                                    'progress': progress,
+                                                    'completed': completed,
+                                                    'total': total_episodes,
+                                                    'percentage': (completed / total_episodes * 100) if total_episodes > 0 else 0,
+                                                    'recent_activity': True
+                                                })
+                                                print(f"Added recent activity: {show_info['title']}")
+                                                break
+                                    except:
+                                        continue
+                                break
+                        
+            except Exception as e:
+                print(f"Error checking progress for show {show_id}: {e}")
+                continue
+        
+        # Remove duplicates based on show ID
+        unique_shows = {}
+        for option in continue_options:
+            show_id = str(option['show']['ids']['trakt'])
+            if show_id not in unique_shows:
+                unique_shows[show_id] = option
+        
+        continue_options = list(unique_shows.values())
         
         if not continue_options:
             embed = discord.Embed(
                 title="📺 Continue Watching",
-                description="No shows in progress found. Start watching some shows or use `/progress <show>` to check specific shows!",
+                description=f"No shows in progress found from {len(all_shows)} shows checked.\n\n"
+                           f"This might mean:\n"
+                           f"• Your shows are fully caught up\n"
+                           f"• You haven't started watching yet\n"
+                           f"• Try using `/progress <show>` to check specific shows",
                 color=0xff6600
             )
             await interaction.followup.send(embed=embed)
             return
         
-        # Sort by percentage to show most progressed first
-        continue_options.sort(key=lambda x: x['percentage'], reverse=True)
+        # Sort by percentage and recent activity
+        continue_options.sort(key=lambda x: (x.get('recent_activity', False), x['percentage']), reverse=True)
         
         embed = discord.Embed(
             title="📺 Continue Watching",
-            description=f"You have {len(continue_options)} shows in progress:",
+            description=f"Found {len(continue_options)} shows you can continue:",
             color=0x00ff88
         )
         
-        for i, option in enumerate(continue_options[:5], 1):  # Show top 5
+        for i, option in enumerate(continue_options[:8], 1):  # Show top 8
             show = option['show']
             completed = option['completed']
             total = option['total']
@@ -2270,14 +2383,20 @@ async def continue_watching(interaction: discord.Interaction):
             
             progress_bar = '🟩' * int(percentage // 10) + '⬜' * (10 - int(percentage // 10))
             
+            status = ""
+            if option.get('recent_activity'):
+                status = " 🔥"
+            
             embed.add_field(
-                name=f"{i}. {show['title']} ({show.get('year', 'N/A')})",
+                name=f"{i}. {show['title']} ({show.get('year', 'N/A')}){status}",
                 value=f"**{completed}/{total} episodes** ({percentage:.1f}%)\n{progress_bar}",
                 inline=False
             )
         
-        if len(continue_options) > 5:
-            embed.set_footer(text=f"...and {len(continue_options) - 5} more shows. Use /progress <show> for detailed management.")
+        if len(continue_options) > 8:
+            embed.set_footer(text=f"...and {len(continue_options) - 8} more shows. Use /progress <show> for detailed management.")
+        else:
+            embed.set_footer(text="🔥 = Recent activity • Use /progress <show> for detailed management")
         
         # Add poster from most progressed show
         if continue_options:
@@ -2291,7 +2410,12 @@ async def continue_watching(interaction: discord.Interaction):
         
     except Exception as e:
         print(f"Error in continue_watching: {e}")
-        await interaction.followup.send("❌ Error fetching your watching progress. Please try again.")
+        embed = discord.Embed(
+            title="❌ Error",
+            description=f"Error fetching your watching progress: {str(e)}\n\nTry again in a moment.",
+            color=0xff0000
+        )
+        await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="episode", description="Mark or unmark a specific episode as watched")
 @app_commands.describe(

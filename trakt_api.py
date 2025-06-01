@@ -329,10 +329,14 @@ class TraktAPI:
     def mark_episode_watched(self, access_token: str, show_id: str, season: int, episode: int) -> bool:
         """Mark a specific episode as watched."""
         data = {
-            'episodes': [{
+            'shows': [{
                 'ids': {'trakt': int(show_id)},
-                'season': season,
-                'number': episode
+                'seasons': [{
+                    'number': season,
+                    'episodes': [{
+                        'number': episode
+                    }]
+                }]
             }]
         }
         
@@ -342,6 +346,7 @@ class TraktAPI:
                 json=data,
                 headers=self.get_headers(access_token)
             )
+            print(f"Mark episode response: {response.status_code}, {response.text}")
             return response.status_code == 201
         except Exception as e:
             print(f"Error marking episode as watched: {e}")
@@ -350,9 +355,11 @@ class TraktAPI:
     def mark_season_watched(self, access_token: str, show_id: str, season: int) -> bool:
         """Mark an entire season as watched."""
         data = {
-            'seasons': [{
+            'shows': [{
                 'ids': {'trakt': int(show_id)},
-                'number': season
+                'seasons': [{
+                    'number': season
+                }]
             }]
         }
         
@@ -362,6 +369,7 @@ class TraktAPI:
                 json=data,
                 headers=self.get_headers(access_token)
             )
+            print(f"Mark season response: {response.status_code}, {response.text}")
             return response.status_code == 201
         except Exception as e:
             print(f"Error marking season as watched: {e}")
@@ -370,10 +378,14 @@ class TraktAPI:
     def unmark_episode_watched(self, access_token: str, show_id: str, season: int, episode: int) -> bool:
         """Unmark a specific episode as watched."""
         data = {
-            'episodes': [{
+            'shows': [{
                 'ids': {'trakt': int(show_id)},
-                'season': season,
-                'number': episode
+                'seasons': [{
+                    'number': season,
+                    'episodes': [{
+                        'number': episode
+                    }]
+                }]
             }]
         }
         
@@ -383,6 +395,7 @@ class TraktAPI:
                 json=data,
                 headers=self.get_headers(access_token)
             )
+            print(f"Unmark episode response: {response.status_code}, {response.text}")
             return response.status_code == 200
         except Exception as e:
             print(f"Error unmarking episode: {e}")
@@ -391,9 +404,11 @@ class TraktAPI:
     def unmark_season_watched(self, access_token: str, show_id: str, season: int) -> bool:
         """Unmark an entire season as watched."""
         data = {
-            'seasons': [{
+            'shows': [{
                 'ids': {'trakt': int(show_id)},
-                'number': season
+                'seasons': [{
+                    'number': season
+                }]
             }]
         }
         
@@ -403,6 +418,7 @@ class TraktAPI:
                 json=data,
                 headers=self.get_headers(access_token)
             )
+            print(f"Unmark season response: {response.status_code}, {response.text}")
             return response.status_code == 200
         except Exception as e:
             print(f"Error unmarking season: {e}")
