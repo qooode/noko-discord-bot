@@ -37,7 +37,19 @@ class ShowProgressView(discord.ui.View):
         if progress_data:
             try:
                 completed = progress_data.get('completed', 0)
-                total = progress_data.get('episodes', 0)
+                seasons = progress_data.get('seasons', [])
+                
+                # Calculate total episodes from seasons instead of relying on 'episodes' field
+                total = 0
+                if seasons:
+                    for season in seasons:
+                        s_episodes = season.get('episodes', [])
+                        s_total = len(s_episodes) if isinstance(s_episodes, list) else (s_episodes if isinstance(s_episodes, int) else 0)
+                        total += s_total
+                else:
+                    # Fallback to episodes field if seasons not available
+                    total = progress_data.get('episodes', 0)
+                
                 percentage = (completed / total * 100) if total > 0 else 0
                 
                 embed.add_field(
@@ -47,7 +59,6 @@ class ShowProgressView(discord.ui.View):
                     inline=False
                 )
                 
-                seasons = progress_data.get('seasons', [])
                 if seasons:
                     season_text = ""
                     for season in seasons[:5]:
