@@ -77,11 +77,11 @@ class TraktAPI:
         return None
     
     def search_content(self, query: str, content_type: str = 'show,movie') -> List[Dict[str, Any]]:
-        """Search for shows/movies."""
+        """Search for shows/movies with extended information including images."""
         try:
             response = requests.get(
                 f"{self.base_url}/search/{content_type}",
-                params={'query': query, 'limit': 10},
+                params={'query': query, 'limit': 10, 'extended': 'full'},
                 headers=self.get_headers()
             )
             if response.status_code == 200:
@@ -91,30 +91,68 @@ class TraktAPI:
         return []
     
     def get_show_info(self, show_id: str) -> Optional[Dict[str, Any]]:
-        """Get detailed show information."""
+        """Get detailed show information with images."""
         try:
             response = requests.get(
                 f"{self.base_url}/shows/{show_id}?extended=full",
                 headers=self.get_headers()
             )
             if response.status_code == 200:
-                return response.json()
+                show_data = response.json()
+                
+                # Get images for the show
+                images_response = requests.get(
+                    f"https://api.themoviedb.org/3/tv/{show_data.get('ids', {}).get('tmdb')}?api_key=YOUR_TMDB_KEY&append_to_response=images",
+                    headers={'Content-Type': 'application/json'}
+                )
+                
+                # For now, we'll use a simpler approach - construct image URLs
+                if show_data.get('ids', {}).get('tmdb'):
+                    tmdb_id = show_data['ids']['tmdb']
+                    show_data['poster_url'] = f"https://image.tmdb.org/t/p/w500/{tmdb_id}.jpg"  # This is a simplified approach
+                
+                return show_data
         except Exception as e:
             print(f"Error getting show info: {e}")
         return None
     
     def get_movie_info(self, movie_id: str) -> Optional[Dict[str, Any]]:
-        """Get detailed movie information."""
+        """Get detailed movie information with images."""
         try:
             response = requests.get(
                 f"{self.base_url}/movies/{movie_id}?extended=full",
                 headers=self.get_headers()
             )
             if response.status_code == 200:
-                return response.json()
+                movie_data = response.json()
+                
+                # Add poster URL if TMDB ID is available
+                if movie_data.get('ids', {}).get('tmdb'):
+                    tmdb_id = movie_data['ids']['tmdb']
+                    movie_data['poster_url'] = f"https://image.tmdb.org/t/p/w500/{tmdb_id}.jpg"
+                
+                return movie_data
         except Exception as e:
             print(f"Error getting movie info: {e}")
         return None
+    
+    def get_content_images(self, content_type: str, tmdb_id: int) -> Dict[str, str]:
+        """Get image URLs for content using TMDB ID."""
+        images = {}
+        try:
+            # Using fanart.tv API patterns for common poster locations
+            # This is a simplified approach - in production you'd want proper TMDB API integration
+            base_url = "https://image.tmdb.org/t/p"
+            
+            images['poster_small'] = f"{base_url}/w300/{tmdb_id}.jpg"
+            images['poster_medium'] = f"{base_url}/w500/{tmdb_id}.jpg" 
+            images['poster_large'] = f"{base_url}/w780/{tmdb_id}.jpg"
+            images['backdrop'] = f"{base_url}/w1280/{tmdb_id}.jpg"
+            
+        except Exception as e:
+            print(f"Error getting images: {e}")
+        
+        return images
     
     def mark_as_watched(self, access_token: str, content_type: str, item_id: str) -> bool:
         """Mark content as watched."""
@@ -247,4 +285,125 @@ class TraktAPI:
                 return response.json()
         except Exception as e:
             print(f"Error getting calendar: {e}")
-        return [] 
+        return []
+    
+    def get_show_seasons(self, show_id: str) -> List[Dict[str, Any]]:
+        """Get all seasons for a show with episode counts."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/shows/{show_id}/seasons?extended=episodes",
+                headers=self.get_headers()
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error getting show seasons: {e}")
+        return []
+    
+    def get_season_episodes(self, show_id: str, season_number: int) -> List[Dict[str, Any]]:
+        """Get all episodes for a specific season."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/shows/{show_id}/seasons/{season_number}?extended=full",
+                headers=self.get_headers()
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error getting season episodes: {e}")
+        return []
+    
+    def get_show_progress(self, access_token: str, show_id: str) -> Optional[Dict[str, Any]]:
+        """Get detailed watching progress for a show."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/shows/{show_id}/progress/watched",
+                headers=self.get_headers(access_token)
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error getting show progress: {e}")
+        return None
+    
+    def mark_episode_watched(self, access_token: str, show_id: str, season: int, episode: int) -> bool:
+        """Mark a specific episode as watched."""
+        data = {
+            'episodes': [{
+                'ids': {'trakt': int(show_id)},
+                'season': season,
+                'number': episode
+            }]
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/sync/history",
+                json=data,
+                headers=self.get_headers(access_token)
+            )
+            return response.status_code == 201
+        except Exception as e:
+            print(f"Error marking episode as watched: {e}")
+        return False
+    
+    def mark_season_watched(self, access_token: str, show_id: str, season: int) -> bool:
+        """Mark an entire season as watched."""
+        data = {
+            'seasons': [{
+                'ids': {'trakt': int(show_id)},
+                'number': season
+            }]
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/sync/history",
+                json=data,
+                headers=self.get_headers(access_token)
+            )
+            return response.status_code == 201
+        except Exception as e:
+            print(f"Error marking season as watched: {e}")
+        return False
+    
+    def unmark_episode_watched(self, access_token: str, show_id: str, season: int, episode: int) -> bool:
+        """Unmark a specific episode as watched."""
+        data = {
+            'episodes': [{
+                'ids': {'trakt': int(show_id)},
+                'season': season,
+                'number': episode
+            }]
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/sync/history/remove",
+                json=data,
+                headers=self.get_headers(access_token)
+            )
+            return response.status_code == 200
+        except Exception as e:
+            print(f"Error unmarking episode: {e}")
+        return False
+    
+    def unmark_season_watched(self, access_token: str, show_id: str, season: int) -> bool:
+        """Unmark an entire season as watched."""
+        data = {
+            'seasons': [{
+                'ids': {'trakt': int(show_id)},
+                'number': season
+            }]
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/sync/history/remove",
+                json=data,
+                headers=self.get_headers(access_token)
+            )
+            return response.status_code == 200
+        except Exception as e:
+            print(f"Error unmarking season: {e}")
+        return False 

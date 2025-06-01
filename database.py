@@ -74,12 +74,32 @@ class Database:
             print(f"Error setting privacy: {e}")
         return False
     
-    def get_public_users(self) -> Dict[str, Dict[str, Any]]:
+    def get_public_users(self) -> List[Dict[str, Any]]:
         """Get all users with public profiles."""
+        data = self._load_data()
+        public_users = []
+        
+        for user_id, user_data in data['users'].items():
+            if user_data.get('is_public', False):
+                public_users.append({
+                    'discord_id': user_id,
+                    'trakt_username': user_data['trakt_username'],
+                    'access_token': user_data.get('access_token', ''),
+                    'connected_at': user_data.get('connected_at', '')
+                })
+        
+        return public_users
+    
+    def get_user_count(self) -> Dict[str, int]:
+        """Get user statistics."""
+        data = self._load_data()
+        total_users = len(data['users'])
+        public_users = len([u for u in data['users'].values() if u.get('is_public', False)])
+        
         return {
-            discord_id: user_data 
-            for discord_id, user_data in self.data['users'].items() 
-            if user_data.get('is_public', False)
+            'total': total_users,
+            'public': public_users,
+            'private': total_users - public_users
         }
     
     def add_reminder(self, discord_id: str, show_id: str, show_name: str) -> bool:

@@ -1,19 +1,23 @@
 # Noko - Advanced Discord Trakt.tv Bot
 
-A **powerful and interactive** Discord bot for managing your Trakt.tv account with modern Discord features!
+A **powerful and interactive** Discord bot for managing your Trakt.tv account with modern Discord features and **rich visual content**!
 
 ## ✨ Advanced Features
 
-### 🎮 **Interactive UI**
+### 🎮 **Interactive UI with Rich Visuals**
 - **Button Navigation** - Browse search results with Previous/Next buttons
 - **Dropdown Menus** - Select content from interactive dropdowns  
 - **Action Buttons** - Mark watched, add to watchlist, set reminders with one click
 - **Modal Forms** - Custom reminder settings with rich input forms
 - **Pagination** - Navigate through multiple pages of results seamlessly
+- **🖼️ Poster Images** - Beautiful movie/show posters in all displays
+- **📊 Rich Data** - Ratings with vote counts, runtime, genres, release dates
+- **🌟 Enhanced Visuals** - Thumbnails, full images, and styled embeds
 
 ### 🔍 **Smart Search & Autocomplete**
 - **Real-time Autocomplete** - Shows/movies suggest as you type
 - **Interactive Search Results** - Browse with buttons, get info with dropdowns
+- **🎬 Visual Search** - Poster thumbnails and rich details in results
 - **Quick Actions** - One command to search, mark watched, or add to watchlist
 - **Context Menu** - Right-click any message to extract show/movie info
 
@@ -21,12 +25,17 @@ A **powerful and interactive** Discord bot for managing your Trakt.tv account wi
 - **One-click Actions** - Interactive buttons for all operations
 - **Smart Reminders** - Custom timing and messages for episode notifications
 - **Rich Statistics** - Comprehensive stats with recent activity tracking
-- **Instant Feedback** - Embeds with status updates and confirmation
+- **🖼️ Visual Feedback** - Poster images and detailed info in all responses
+- **📈 Enhanced Data** - Vote counts, genres, release dates, runtime info
 
 ### 👥 **Advanced Social Features**  
 - **Public/Private Profiles** - Control who sees your activity
 - **User Stats Comparison** - View detailed statistics for any user
 - **Activity Tracking** - See what friends are watching in real-time
+- **🎭 Visual Activity** - Profile images and content posters in social features
+- **🌍 Live Community Feed** - Real-time activity from all public users
+- **📈 Community Trends** - Aggregated stats and trending content
+- **🔥 Social Discovery** - Find what's hot in your community
 
 ## Quick Setup
 
@@ -147,6 +156,8 @@ tail -f bot.log
 ### **Social Features**
 - `/watching [user]` - See current watching activity
 - `/last [user] [count]` - Recent watches (1-10 items)
+- `/community` - **Live community activity feed** 🔴
+- `/trends [days]` - **Community trends & analytics** (1-14 days)
 
 ### **Context Menu Commands** (Right-click)
 - **"Quick Trakt Info"** - Right-click any message to extract show/movie info
@@ -156,21 +167,48 @@ tail -f bot.log
 
 ## 🎮 Interactive Features
 
-### **Search Interface**
+### **Enhanced Search Interface with Visuals**
 ```
 🔍 Search Results for 'Breaking Bad'    Page 1/3
 ┌─────────────────────────────────────────────┐
-│ 1. Breaking Bad (2008) - Show              │
-│ ⭐ 9.3/10                                  │
+│ 🖼️ [Poster]  1. Breaking Bad (2008) - Show │
+│ ⭐ 9.3/10 (45,678 votes)                   │
+│ ⏱️ 47 min • 📺 Ended                       │
+│ 🏷️ Drama, Crime, Thriller                  │
 │ A high school chemistry teacher...          │
 └─────────────────────────────────────────────┘
 [◀️ Previous] [▶️ Next] [📺 More Info]
 ```
 
-### **Action Buttons**
+### **Rich Content Information**
+```
+🎬 Breaking Bad (2008)
+🖼️ [Full Poster Image]
+
+📊 Details:
+⭐ 9.3/10 (45,678 votes)
+⏱️ 47 min episodes
+📺 Ended • 📡 AMC
+📅 First Aired: 2008-01-20
+🏷️ Drama, Crime, Thriller, Dark Comedy
+🌍 Available in: English, Spanish, German...
+🎥 Watch Trailer | 🌐 Official Site
+```
+
+### **Action Buttons with Visual Feedback**
 After getting show/movie info:
 ```
 [✅ Mark Watched] [📋 Add to Watchlist] [🔔 Set Reminder]
+```
+
+### **Visual Social Features**
+```
+📺 Currently Watching
+👤 username is watching:
+
+🖼️ [Poster] Better Call Saul
+S6E13: Waterworks
+⭐ 9.0/10 • ⏱️ 63 min
 ```
 
 ### **Custom Reminder Modal**
@@ -183,13 +221,83 @@ After getting show/movie info:
 └──────────────────────────────────────────────┘
 ```
 
-### **Smart Autocomplete**
+### **Smart Autocomplete with Rich Previews**
 As you type `/search bre...`:
 ```
-🔍 Breaking Bad (2008)
-🔍 Breaking (2008) 
-🔍 Breakfast Club (1985)
+🔍 🎬 Breaking Bad (2008) - ⭐ 9.3/10
+🔍 🎭 Breaking (2008) - ⭐ 7.2/10
+🔍 🎪 Breakfast Club (1985) - ⭐ 7.8/10
 ```
+
+### **Live Community Activity**
+```
+🌍 Community Watch - Live Activity
+Real-time activity from 12 public members
+
+📊 Community Stats
+👥 45 total • 12 public • 5 active now
+
+🔥 What's Hot Right Now
+📺 Trending Shows:
+• Breaking Bad (3 watching)
+• The Office (2 watching)
+
+🎬 Trending Movies:
+• Oppenheimer (2 watching)
+
+🔴 Live Activity (5 active)
+📺 alice_tv watching Breaking Bad
+   S5E14: Ozymandias
+   ⭐ 9.9/10
+
+🎬 bob_movies watching Oppenheimer
+   ⭐ 8.3/10
+```
+
+### **Community Trends & Analytics**
+```
+📈 Community Trends - Past 7 Days
+Aggregated activity from 12 public members
+
+📊 Community Activity Overview
+📺 156 episodes watched
+🎬 23 movies watched  
+👥 8 active members
+🏆 47 unique titles
+
+📺 Trending Shows    🎬 Trending Movies    🔥 Most Active
+1. The Office • 23   1. Oppenheimer • 5    1. alice_tv • 34
+2. Breaking Bad • 19 2. Barbie • 4         2. movie_bob • 28
+3. Stranger Things  3. GOTG Vol 3 • 3     3. bingewatcher • 22
+
+🎯 Fun Stats
+📊 19.9 avg watches per active user
+⏱️ ~7,650 hours of content consumed
+🗓️ 7 days of community activity
+```
+
+## 🖼️ Visual Content Features
+
+### **Poster Integration**
+- **Search Results** - Thumbnail posters for visual browsing
+- **Detailed Info** - Full-size poster images with content details
+- **Social Features** - Profile images in watching activity
+- **Quick Info** - Instant poster thumbnails in context menus
+
+### **Rich Data Display**
+- **Enhanced Ratings** - Star ratings with vote counts (⭐ 9.3/10 (45,678 votes))
+- **Runtime Info** - Formatted time displays (⏱️ 47 min)
+- **Status Indicators** - Show status with icons (📺 Ended, 📡 AMC)
+- **Genre Tags** - Visual genre categorization (🏷️ Drama, Crime)
+- **Release Dates** - Formatted air dates (📅 2008-01-20)
+- **Language Support** - Available translations (🌍 English, Spanish...)
+
+### **Visual Enhancement Details**
+- **TMDB Integration** - High-quality poster images from The Movie Database
+- **Smart Thumbnails** - Appropriately sized images for different contexts
+- **Fallback Handling** - Graceful degradation when images aren't available
+- **Rich Embeds** - Beautiful Discord embeds with proper formatting
+- **Icon Usage** - Consistent iconography throughout the interface
 
 ## Privacy & Social
 
