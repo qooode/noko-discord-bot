@@ -10,12 +10,12 @@ A powerful Discord bot for managing your Trakt.tv account and tracking shows/mov
 - 📺 **Progress Tracking**: Check watching progress and next episodes
 - 🔍 **Show Discovery**: Search and get info about shows/movies
 
-## Setup
+## Quick Setup
 
 1. **Clone and Install**
    ```bash
-   git clone <your-repo>
-   cd trakt-bot
+   git clone https://github.com/qooode/noko-discord-bot.git
+   cd noko-discord-bot
    pip install -r requirements.txt
    ```
 
@@ -31,13 +31,66 @@ A powerful Discord bot for managing your Trakt.tv account and tracking shows/mov
    - Set Redirect URI to: `urn:ietf:wg:oauth:2.0:oob`
 
 4. **Configuration**
-   - Copy `.env.example` to `.env`
-   - Fill in your tokens and settings
+   - Create `.env` file with your settings:
+   ```bash
+   # Discord Bot Settings
+   DISCORD_TOKEN=your_discord_bot_token_here
+   COMMAND_PREFIX=!
+
+   # Trakt.tv API Settings
+   TRAKT_CLIENT_ID=your_trakt_client_id_here
+   TRAKT_CLIENT_SECRET=your_trakt_client_secret_here
+   TRAKT_REDIRECT_URI=urn:ietf:wg:oauth:2.0:oob
+
+   # Bot Settings
+   BOT_NAME=Noko
+   ```
 
 5. **Run the Bot**
    ```bash
    python noko.py
    ```
+
+## Server Deployment
+
+For production deployment on a server:
+
+```bash
+# Kill any existing bot processes
+pkill -f "python.*noko.py"
+
+# Clean up and clone fresh
+mkdir noko
+cd ..
+rm -rf noko
+git clone https://github.com/qooode/noko-discord-bot.git noko
+
+# Set up virtual environment
+python3 -m venv venv
+source venv/bin/activate
+cd noko
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment variables
+nano .env
+
+# Run bot in background with logging
+nohup python noko.py > bot.log 2>&1 &
+```
+
+**Managing the bot:**
+```bash
+# Check if bot is running
+ps aux | grep noko.py
+
+# Stop the bot (replace PID with actual process ID)
+kill [PID]
+
+# View logs
+tail -f bot.log
+```
 
 ## Commands
 
