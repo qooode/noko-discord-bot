@@ -40,6 +40,18 @@ A **powerful and interactive** Discord bot for managing your Trakt.tv account wi
 - **📈 Community Trends** - Aggregated stats and trending content
 - **🔥 Social Discovery** - Find what's hot in your community
 
+### 🎬 **ARENA - Movie Challenge System**
+- **Daily Movie Challenges** - Compete in rotating movie-based challenges
+- **Team Battles** - Form teams and compete together for points
+- **Democratic Team Formation** - Vote on team sizes and participate democratically
+- **Challenge Variety** - Genre Master, Decade Dive, Rating Rush, Speed Run, and more
+- **Auto-Balancing** - Late joiners are automatically balanced into teams
+- **Point System** - Earn points and climb leaderboards through movie watching
+- **Honor System** - Complete challenges through self-reporting with basic validation
+- **Weekly Resets** - Fresh competition cycles keep the arena exciting
+- **Persistent State** - Arena survives bot restarts and maintains ongoing battles
+- **Admin Controls** - Moderators can reset arena and manually start challenges
+
 ## 🏗️ Architecture
 
 ### **Modular Design**
@@ -62,10 +74,10 @@ The bot features a clean, modular architecture for easy maintenance and developm
 - **main.py** - Core bot setup, event handling, background tasks
 - **commands.py** - User-facing slash commands and basic operations
 - **management.py** - Complex show management and episode tracking
-- **social.py** - Community features and social interactions
+- **social.py** - Community features, social interactions, and Arena system
 - **views.py** - All Discord UI components and interactive elements
 - **trakt_api.py** - Trakt.tv API integration and data handling
-- **database.py** - Persistent data storage and user management
+- **database.py** - Persistent data storage, user management, and Arena data
 
 ## Quick Setup
 
@@ -203,6 +215,32 @@ tail -f bot.log
   - Most active community members
   - Aggregated watching statistics
 
+### **🎬 ARENA - Movie Challenge Commands**
+- `/arena` - **Join the movie challenge Arena** 🎬
+  - Enter daily movie competitions
+  - View current challenges and leaderboards
+  - Interactive team formation system
+- `/arena-status` - **Check your Arena progress** 📊
+  - View personal stats and team information
+  - See current challenge details and time remaining
+  - Track points and wins
+- `/arena-complete` - **Mark current challenge as completed** 🏆
+  - Self-report challenge completion
+  - Earn points and increase win count
+  - Honor system with basic validation
+- `/arena-leave` - **Leave Arena permanently** 🚪
+  - Exit arena and lose all progress
+  - Teams automatically rebalanced
+  - Can rejoin anytime
+- `/arena-reset` - **Reset entire Arena** (Admin only) 🔄
+  - Clear all participants and teams
+  - Reset points and challenges
+  - Fresh start for community
+- `/arena-new-challenge` - **Start new challenge** (Admin only) 🎲
+  - Manually trigger new random challenge
+  - Override automatic rotation
+  - Control arena flow
+
 ### **💡 Help & Discovery**
 - `/help` - **Complete command guide** with examples and getting started tips
 
@@ -318,6 +356,71 @@ Aggregated activity from 12 public members
 📊 19.9 avg watches per active user
 ⏱️ ~7,650 hours of content consumed
 🗓️ 7 days of community activity
+```
+
+### **Arena Movie Challenge Interface**
+```
+🎬⚔️ ARENA - Movie Challenge Hub
+Daily movie duels • Team battles • Epic challenges
+
+🎯 Today's Challenge: Genre Master
+Watch any Horror movie you haven't seen
+⏰ Ends in 18 hours
+🏆 Reward: 10 points
+
+⚔️ Arena Status
+👥 12 gladiators ready
+🛡️ 3 teams formed  
+🔥 8 active today
+
+🏆 Top Gladiators
+🥇 movie_master • 85 pts
+🥈 film_buff • 72 pts  
+🥉 cinema_queen • 68 pts
+
+[⚔️ Join Arena] [🛡️ Team Setup] [🏆 Leaderboard]
+```
+
+### **Arena Team Formation**
+```
+🛡️ Team Formation Vote
+12 gladiators ready! How should we form teams?
+
+⚖️ Voting Rules
+• Majority vote decides team size
+• After teams form, vote to start challenges  
+• Arena stays open for late joiners!
+
+[👥 Teams of 2] [🛡️ Teams of 3] [⚔️ Teams of 4+]
+
+🛡️ Teams Formed!
+Teams of 3 won the vote!
+
+⚔️ Battle Teams
+Team 1: alice_movies, bob_cinema, charlie_films
+Team 2: diana_watch, eve_binge, frank_movie  
+Team 3: grace_film, henry_show, iris_tv
+Team 4: jack_watch, kelly_cinema
+
+[🚀 START ARENA]
+```
+
+### **Challenge Completion**
+```
+🏆 Challenge Completed!
+movie_master completed: Genre Master
+
+🎯 Challenge  
+Watch any Horror movie you haven't seen
+
+📊 Rewards
+🎬 +10 points
+🏆 Total: 85 points
+🥇 Wins: 8
+
+🛡️ Team: Team 1
+
+Honor system - thanks for playing fairly! ��
 ```
 
 ## 🖼️ Visual Content Features
