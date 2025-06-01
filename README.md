@@ -96,36 +96,34 @@ kill [PID]
 tail -f bot.log
 ```
 
-## Commands
+## Slash Commands
 
 ### Account Management
-- `!connect` - Link your Trakt.tv account
-- `!watched <show/movie>` - Mark as watched
-- `!unwatch <show/movie>` - Unmark as watched
-- `!watchlist <show/movie>` - Add to watchlist
-- `!progress` - Show your watching progress
+- `/connect` - Link your Trakt.tv account
+- `/watched <show/movie>` - Mark as watched
+- `/unwatch <show/movie>` - Unmark as watched
+- `/watchlist <show/movie>` - Add to watchlist
+- `/public` - Make your profile public
+- `/private` - Make your profile private
 
 ### Social Features
-- `!watching @user` - See what someone is watching
-- `!last @user` - See last watched content
-- `!next @user` - See upcoming episodes
-- `!profile @user` - View user's profile
+- `/watching [user]` - See what you or someone else is watching
+- `/last [user] [count]` - See recent watches (1-10 items)
 
 ### Reminders
-- `!remind <show>` - Get reminded for new episodes
-- `!unremind <show>` - Stop reminders for a show
-- `!reminders` - List all your reminders
+- `/remind <show>` - Get reminded for new episodes
+- `/unremind <show>` - Stop reminders for a show
+- `/reminders` - List all your reminders
 
 ### General
-- `!search <query>` - Search for shows/movies
-- `!info <show/movie>` - Get detailed info
-- `!help` - Show all commands
+- `/search <query>` - Search for shows/movies
+- `/info <show/movie>` - Get detailed info
 
 ## Privacy
 
 Users can control their privacy with:
-- `!public` - Make profile public
-- `!private` - Make profile private
+- `/public` - Make profile public
+- `/private` - Make profile private
 
 ## Troubleshooting
 
@@ -154,5 +152,5 @@ discord.errors.PrivilegedIntentsRequired: Shard ID None is requesting privileged
 
 ### 📝 Bot Not Responding
 - Check the bot has proper permissions in your Discord server
-- Verify the command prefix (default is `!`)
+- Slash commands may take a few minutes to sync when first starting
 - Check `bot.log` for error messages 
