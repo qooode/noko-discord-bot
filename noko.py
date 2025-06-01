@@ -12,10 +12,18 @@ from database import Database
 # Validate configuration
 config.validate_config()
 
-# Initialize components
+# Initialize components with proper intents
 intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix=config.COMMAND_PREFIX, intents=intents)
+intents.message_content = True  # Required for reading message content
+intents.guilds = True           # Required for guild information
+
+try:
+    bot = commands.Bot(command_prefix=config.COMMAND_PREFIX, intents=intents)
+except Exception as e:
+    print(f"Error creating bot: {e}")
+    print("Make sure you have enabled the 'Message Content Intent' in the Discord Developer Portal!")
+    exit(1)
+
 trakt_api = TraktAPI()
 db = Database()
 

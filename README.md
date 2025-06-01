@@ -23,6 +23,10 @@ A powerful Discord bot for managing your Trakt.tv account and tracking shows/mov
    - Go to [Discord Developer Portal](https://discord.com/developers/applications)
    - Create a new application and bot
    - Copy the bot token
+   - **IMPORTANT**: Go to the "Bot" section and enable these privileged intents:
+     - ✅ **Message Content Intent** (required)
+     - ✅ **Server Members Intent** (recommended)
+   - Save changes
 
 3. **Trakt.tv API Setup**
    - Go to [Trakt.tv API](https://trakt.tv/oauth/applications)
@@ -121,4 +125,34 @@ tail -f bot.log
 
 Users can control their privacy with:
 - `!public` - Make profile public
-- `!private` - Make profile private 
+- `!private` - Make profile private
+
+## Troubleshooting
+
+### ❌ `PrivilegedIntentsRequired` Error
+If you get this error when starting the bot:
+```
+discord.errors.PrivilegedIntentsRequired: Shard ID None is requesting privileged intents...
+```
+
+**Solution:**
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Select your application
+3. Go to the "Bot" section
+4. Scroll down to "Privileged Gateway Intents"
+5. Enable **Message Content Intent**
+6. Click "Save Changes"
+7. Restart your bot
+
+### 🔑 Invalid Token Error
+- Make sure your `DISCORD_TOKEN` in `.env` is correct
+- Regenerate the token in Discord Developer Portal if needed
+
+### 🔗 Trakt.tv API Issues
+- Verify your `TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET` are correct
+- Make sure the redirect URI is set to: `urn:ietf:wg:oauth:2.0:oob`
+
+### 📝 Bot Not Responding
+- Check the bot has proper permissions in your Discord server
+- Verify the command prefix (default is `!`)
+- Check `bot.log` for error messages 
