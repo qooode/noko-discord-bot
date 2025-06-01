@@ -287,16 +287,27 @@ class TraktAPI:
             print(f"Error getting user progress: {e}")
         return []
     
-    def get_calendar(self, username: str, days: int = 7) -> List[Dict[str, Any]]:
-        """Get upcoming episodes for user."""
+    def get_calendar(self, username: str, days: int = 7, access_token: str = None) -> List[Dict[str, Any]]:
+        """Get upcoming episodes for user (requires authentication for personal calendar)."""
         start_date = datetime.now().strftime('%Y-%m-%d')
         try:
-            response = requests.get(
-                f"{self.base_url}/users/{username}/calendar/shows/{start_date}/{days}",
-                headers=self.get_headers()
-            )
+            if access_token:
+                # Use authenticated endpoint for personal calendar
+                response = requests.get(
+                    f"{self.base_url}/calendars/my/shows/{start_date}/{days}",
+                    headers=self.get_headers(access_token)
+                )
+            else:
+                # Fallback to public endpoint (may have limited data)
+                response = requests.get(
+                    f"{self.base_url}/users/{username}/calendar/shows/{start_date}/{days}",
+                    headers=self.get_headers()
+                )
+            
             if response.status_code == 200:
                 return response.json()
+            else:
+                print(f"Calendar API returned {response.status_code}: {response.text}")
         except Exception as e:
             print(f"Error getting calendar: {e}")
         return []
@@ -629,4 +640,52 @@ class TraktAPI:
             return debug_info
         except Exception as e:
             print(f"Error in debug method: {e}")
-            return [] 
+            return []
+
+    def get_user_watchlist(self, access_token: str) -> List[Dict[str, Any]]:
+        """Get user's watchlist with authentication."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/users/me/watchlist",
+                params={'extended': 'full'},
+                headers=self.get_headers(access_token)
+            )
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"Watchlist API returned {response.status_code}: {response.text}")
+        except Exception as e:
+            print(f"Error getting user watchlist: {e}")
+        return []
+    
+    def get_popular_movies(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get popular movies from Trakt."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/movies/popular",
+                params={'limit': limit, 'extended': 'full'},
+                headers=self.get_headers()
+            )
+            if response.status_code == 200:
+                movies_data = response.json()
+                # Convert to search result format for consistency
+                return [{'movie': movie} for movie in movies_data]
+        except Exception as e:
+            print(f"Error getting popular movies: {e}")
+        return []
+    
+    def get_popular_shows(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get popular shows from Trakt."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/shows/popular", 
+                params={'limit': limit, 'extended': 'full'},
+                headers=self.get_headers()
+            )
+            if response.status_code == 200:
+                shows_data = response.json()
+                # Convert to search result format for consistency
+                return [{'show': show} for show in shows_data]
+        except Exception as e:
+            print(f"Error getting popular shows: {e}")
+        return [] 

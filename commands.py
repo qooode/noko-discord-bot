@@ -1193,9 +1193,10 @@ def register_content_commands():
             days = 7
         
         try:
-            # Get calendar data
+            # Get calendar data with authentication
             username = user['trakt_username']
-            calendar_data = trakt_api.get_calendar(username, days)
+            access_token = user['access_token']
+            calendar_data = trakt_api.get_calendar(username, days, access_token)
             
             if not calendar_data:
                 embed = discord.Embed(
