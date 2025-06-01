@@ -1,14 +1,32 @@
-# Noko - Discord Trakt.tv Bot
+# Noko - Advanced Discord Trakt.tv Bot
 
-A powerful Discord bot for managing your Trakt.tv account and tracking shows/movies with friends!
+A **powerful and interactive** Discord bot for managing your Trakt.tv account with modern Discord features!
 
-## Features
+## ✨ Advanced Features
 
-- 🎬 **Account Management**: Mark shows as watched, unmark, add to watchlist
-- 👥 **Social Watching**: See what friends are watching (public profiles only)
-- ⏰ **Episode Reminders**: Get notified when new episodes air
-- 📺 **Progress Tracking**: Check watching progress and next episodes
-- 🔍 **Show Discovery**: Search and get info about shows/movies
+### 🎮 **Interactive UI**
+- **Button Navigation** - Browse search results with Previous/Next buttons
+- **Dropdown Menus** - Select content from interactive dropdowns  
+- **Action Buttons** - Mark watched, add to watchlist, set reminders with one click
+- **Modal Forms** - Custom reminder settings with rich input forms
+- **Pagination** - Navigate through multiple pages of results seamlessly
+
+### 🔍 **Smart Search & Autocomplete**
+- **Real-time Autocomplete** - Shows/movies suggest as you type
+- **Interactive Search Results** - Browse with buttons, get info with dropdowns
+- **Quick Actions** - One command to search, mark watched, or add to watchlist
+- **Context Menu** - Right-click any message to extract show/movie info
+
+### 🎬 **Enhanced Content Management**
+- **One-click Actions** - Interactive buttons for all operations
+- **Smart Reminders** - Custom timing and messages for episode notifications
+- **Rich Statistics** - Comprehensive stats with recent activity tracking
+- **Instant Feedback** - Embeds with status updates and confirmation
+
+### 👥 **Advanced Social Features**  
+- **Public/Private Profiles** - Control who sees your activity
+- **User Stats Comparison** - View detailed statistics for any user
+- **Activity Tracking** - See what friends are watching in real-time
 
 ## Quick Setup
 
@@ -96,34 +114,109 @@ kill [PID]
 tail -f bot.log
 ```
 
-## Slash Commands
+## 🚀 Advanced Slash Commands
 
-### Account Management
-- `/connect` - Link your Trakt.tv account
-- `/watched <show/movie>` - Mark as watched
-- `/unwatch <show/movie>` - Unmark as watched
-- `/watchlist <show/movie>` - Add to watchlist
-- `/public` - Make your profile public
-- `/private` - Make your profile private
+### **Account Management**
+- `/connect` - Link your Trakt.tv account with guided setup
+- `/public` / `/private` - Control profile visibility
+- `/stats` - View comprehensive account statistics
 
-### Social Features
-- `/watching [user]` - See what you or someone else is watching
-- `/last [user] [count]` - See recent watches (1-10 items)
+### **Smart Content Discovery** 
+- `/search <query>` - **Interactive search** with pagination and action buttons
+  - Browse results with ◀️ ▶️ buttons
+  - Select items from dropdown for detailed info
+  - One-click mark watched, add to watchlist, set reminders
+- `/quick_action <content> <action>` - **One-command workflow**
+  - Autocomplete content names as you type
+  - Choose: Mark Watched, Watchlist, Set Reminder, Get Info
+- `/info <show/movie>` - Detailed info **with action buttons**
 
-### Reminders
-- `/remind <show>` - Get reminded for new episodes
-- `/unremind <show>` - Stop reminders for a show
-- `/reminders` - List all your reminders
+### **Advanced Content Management**
+- `/watched <show/movie>` - Mark as watched (with autocomplete)
+- `/unwatch <show/movie>` - Remove from watched (with autocomplete)  
+- `/watchlist <show/movie>` - Add to watchlist (with autocomplete)
 
-### General
-- `/search <query>` - Search for shows/movies
-- `/info <show/movie>` - Get detailed info
+### **Enhanced Reminders**
+- `/remind <show>` - **Custom reminder setup** with modal form
+  - Set hours before episode airs
+  - Add custom reminder messages
+  - Interactive setup with buttons
+- `/unremind <show>` - Remove reminders (with autocomplete)
+- `/reminders` - List all active reminders
 
-## Privacy
+### **Social Features**
+- `/watching [user]` - See current watching activity
+- `/last [user] [count]` - Recent watches (1-10 items)
 
-Users can control their privacy with:
-- `/public` - Make profile public
-- `/private` - Make profile private
+### **Context Menu Commands** (Right-click)
+- **"Quick Trakt Info"** - Right-click any message to extract show/movie info
+
+## 🎮 Interactive Features
+
+### **Search Interface**
+```
+🔍 Search Results for 'Breaking Bad'    Page 1/3
+┌─────────────────────────────────────────────┐
+│ 1. Breaking Bad (2008) - Show              │
+│ ⭐ 9.3/10                                  │
+│ A high school chemistry teacher...          │
+└─────────────────────────────────────────────┘
+[◀️ Previous] [▶️ Next] [📺 More Info]
+```
+
+### **Action Buttons**
+After getting show/movie info:
+```
+[✅ Mark Watched] [📋 Add to Watchlist] [🔔 Set Reminder]
+```
+
+### **Custom Reminder Modal**
+```
+┌─ Reminder Settings for Breaking Bad ────────┐
+│ Reminder Time: [2] hours before episode     │
+│ Custom Message: [Don't miss new episode!]   │
+│                                              │
+│                    [Submit]                  │
+└──────────────────────────────────────────────┘
+```
+
+### **Smart Autocomplete**
+As you type `/search bre...`:
+```
+🔍 Breaking Bad (2008)
+🔍 Breaking (2008) 
+🔍 Breakfast Club (1985)
+```
+
+## Privacy & Social
+
+### **Profile Control**
+- `/public` - Make profile public for social features
+- `/private` - Make profile private (default)
+
+### **Social Features** (Public profiles only)
+- See what friends are watching
+- View recent watch history  
+- Compare statistics
+
+## 🛠️ Technical Features
+
+### **Modern Discord Integration**
+- **Slash Commands** - Native Discord command system
+- **Button Components** - Interactive UI elements  
+- **Select Menus** - Dropdown selection interfaces
+- **Modal Forms** - Rich input dialogs
+- **Context Menus** - Right-click commands
+- **Autocomplete** - Real-time suggestions
+- **Deferred Responses** - No timeout issues
+- **Ephemeral Messages** - Private error messages
+
+### **Enhanced User Experience**
+- **Pagination** - Navigate large result sets
+- **One-click Actions** - Reduce command complexity
+- **Smart Error Handling** - Graceful failure recovery
+- **Rich Embeds** - Beautiful, informative displays
+- **Real-time Feedback** - Instant status updates
 
 ## Troubleshooting
 
@@ -153,4 +246,9 @@ discord.errors.PrivilegedIntentsRequired: Shard ID None is requesting privileged
 ### 📝 Bot Not Responding
 - Check the bot has proper permissions in your Discord server
 - Slash commands may take a few minutes to sync when first starting
-- Check `bot.log` for error messages 
+- Check `bot.log` for error messages
+
+### 🎮 Interactive Features Not Working
+- Ensure your Discord client is up to date
+- Some features require newer Discord versions
+- Mobile Discord may have limited interactive support 
