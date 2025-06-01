@@ -37,6 +37,7 @@ async def on_ready():
     
     # Start background tasks
     check_reminders.start()
+    arena_task.start()
 
 @tasks.loop(hours=6)
 async def check_reminders():
@@ -57,6 +58,82 @@ management.init_management(bot, trakt_api, db)
 
 # Register error handler
 commands.register_error_handler()
+
+# Arena auto-rotation task
+@bot.event
+async def on_ready():
+    print(f'{bot.user} has connected to Discord!')
+    # Start arena management task
+    arena_task.start()
+
+from discord.ext import tasks
+import time
+import random
+
+@tasks.loop(hours=1)  # Check every hour
+async def arena_task():
+    """Auto-rotate arena challenges and cleanup."""
+    try:
+        # Check if current challenge expired
+        challenge = db.get_arena_challenge()
+        if challenge and time.time() > challenge.get('end_time', 0):
+            # Challenge expired, rotate to new one
+            participants = db.get_arena_participants()
+            
+            if len(participants) >= 2:  # Only if people are playing
+                challenges = [
+                    {
+                        "name": "Genre Master",
+                        "description": "Watch any **Horror** movie you haven't seen",
+                        "points": 10,
+                        "type": "genre",
+                        "target": "horror"
+                    },
+                    {
+                        "name": "Decade Dive", 
+                        "description": "Watch a movie from the **1990s**",
+                        "points": 15,
+                        "type": "decade",
+                        "target": "1990s"
+                    },
+                    {
+                        "name": "Rating Rush",
+                        "description": "Watch a movie with **8.0+ rating** on Trakt",
+                        "points": 20,
+                        "type": "rating", 
+                        "target": 8.0
+                    },
+                    {
+                        "name": "Speed Run",
+                        "description": "Watch the **shortest movie** (under 90 min)",
+                        "points": 12,
+                        "type": "runtime",
+                        "target": 90
+                    },
+                    {
+                        "name": "Classic Quest",
+                        "description": "Watch a movie from **before 1980**",
+                        "points": 18,
+                        "type": "classic",
+                        "target": 1980
+                    }
+                ]
+                
+                new_challenge = random.choice(challenges)
+                new_challenge['end_time'] = int(time.time()) + (24 * 60 * 60)
+                
+                db.set_arena_challenge(new_challenge)
+                print(f"Auto-rotated to new challenge: {new_challenge['name']}")
+        
+        # Cleanup old data
+        db.cleanup_arena_data()
+        
+    except Exception as e:
+        print(f"Arena task error: {e}")
+
+@arena_task.before_loop
+async def before_arena_task():
+    await bot.wait_until_ready()
 
 if __name__ == "__main__":
     bot.run(config.DISCORD_TOKEN) 

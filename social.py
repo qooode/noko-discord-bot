@@ -462,4 +462,1271 @@ def register_social_commands():
             )
         
         embed.set_footer(text=f"📈 Trends based on {days} days of activity")
-        await interaction.followup.send(embed=embed) 
+        await interaction.followup.send(embed=embed)
+
+    @bot.tree.command(name="leaderboard", description="See the most active community watchers")
+    @app_commands.describe(
+        timeframe="Time period for leaderboard (week/month/all)",
+        category="What to rank by (total/episodes/movies)"
+    )
+    @app_commands.choices(
+        timeframe=[
+            app_commands.Choice(name="This Week", value="week"),
+            app_commands.Choice(name="This Month", value="month"), 
+            app_commands.Choice(name="All Time", value="all")
+        ],
+        category=[
+            app_commands.Choice(name="Total Watches", value="total"),
+            app_commands.Choice(name="Episodes Only", value="episodes"),
+            app_commands.Choice(name="Movies Only", value="movies")
+        ]
+    )
+    async def community_leaderboard(interaction: discord.Interaction, timeframe: str = "week", category: str = "total"):
+        await interaction.response.defer()
+        
+        public_users = db.get_public_users()
+        
+        if not public_users:
+            embed = discord.Embed(
+                title="🏆 Community Leaderboard",
+                description="No public profiles available. Use `/public` to join the community!",
+                color=0xff6600
+            )
+            await interaction.followup.send(embed=embed)
+            return
+        
+        # Set timeframe parameters
+        if timeframe == "week":
+            days_back = 7
+            timeframe_title = "This Week"
+            emoji = "📅"
+        elif timeframe == "month":
+            days_back = 30
+            timeframe_title = "This Month"
+            emoji = "🗓️"
+        else:  # all time
+            days_back = 365 * 10  # 10 years should cover "all time"
+            timeframe_title = "All Time"
+            emoji = "🏆"
+        
+        # Category settings
+        if category == "episodes":
+            category_title = "Episodes Watched"
+            category_emoji = "📺"
+        elif category == "movies":
+            category_title = "Movies Watched"
+            category_emoji = "🎬"
+        else:  # total
+            category_title = "Total Watches"
+            category_emoji = "🎯"
+        
+        embed = discord.Embed(
+            title=f"🏆 {category_title} Leaderboard - {timeframe_title}",
+            description=f"Top community watchers from {len(public_users)} public members",
+            color=0xffd700
+        )
+        
+        user_stats = {}
+        total_community_episodes = 0
+        total_community_movies = 0
+        
+        for user in public_users:
+            try:
+                history = trakt_api.get_user_history(user['trakt_username'], 100)
+                
+                episodes_count = 0
+                movies_count = 0
+                
+                for item in history:
+                    watched_date = datetime.fromisoformat(item['watched_at'].replace('Z', '+00:00'))
+                    days_ago = (datetime.now().replace(tzinfo=watched_date.tzinfo) - watched_date).days
+                    
+                    if days_ago <= days_back:
+                        if 'show' in item:
+                            episodes_count += 1
+                            total_community_episodes += 1
+                        elif 'movie' in item:
+                            movies_count += 1
+                            total_community_movies += 1
+                
+                # Calculate the score based on category
+                if category == "episodes":
+                    score = episodes_count
+                elif category == "movies":
+                    score = movies_count
+                else:  # total
+                    score = episodes_count + movies_count
+                
+                if score > 0:
+                    user_stats[user['trakt_username']] = {
+                        'score': score,
+                        'episodes': episodes_count,
+                        'movies': movies_count,
+                        'total': episodes_count + movies_count
+                    }
+                    
+            except:
+                continue
+        
+        if not user_stats:
+            embed.add_field(
+                name="😴 No Activity",
+                value=f"No community activity found for {timeframe_title.lower()}.",
+                inline=False
+            )
+            await interaction.followup.send(embed=embed)
+            return
+        
+        # Sort users by score
+        top_users = sorted(user_stats.items(), key=lambda x: x[1]['score'], reverse=True)[:10]
+        
+        # Create leaderboard text
+        leaderboard_text = ""
+        medals = ["🥇", "🥈", "🥉"]
+        
+        for i, (username, stats) in enumerate(top_users, 1):
+            if i <= 3:
+                rank_emoji = medals[i-1]
+            elif i <= 5:
+                rank_emoji = "🏅"
+            else:
+                rank_emoji = f"{i}."
+            
+            score = stats['score']
+            episodes = stats['episodes'] 
+            movies = stats['movies']
+            
+            if category == "total":
+                detail = f"({episodes}📺 + {movies}🎬)"
+            elif category == "episodes":
+                detail = f"episodes"
+            else:  # movies
+                detail = f"movies"
+            
+            leaderboard_text += f"{rank_emoji} **{username}** • {score} {detail}\n"
+        
+        embed.add_field(
+            name=f"{category_emoji} Top {len(top_users)} Watchers",
+            value=leaderboard_text,
+            inline=False
+        )
+        
+        # Community overview stats
+        total_active = len(user_stats)
+        total_watches = total_community_episodes + total_community_movies
+        avg_watches = total_watches / max(total_active, 1)
+        
+        stats_text = f"👥 **{total_active}** active members\n"
+        stats_text += f"📺 **{total_community_episodes}** episodes watched\n"
+        stats_text += f"🎬 **{total_community_movies}** movies watched\n"
+        stats_text += f"📊 **{avg_watches:.1f}** avg per active user"
+        
+        embed.add_field(
+            name=f"📈 Community Stats ({timeframe_title})",
+            value=stats_text,
+            inline=False
+        )
+        
+        # Add achievement highlights for top performer
+        if top_users:
+            top_performer = top_users[0]
+            top_username = top_performer[0]
+            top_stats = top_performer[1]
+            
+            # Calculate some fun stats
+            if timeframe == "week":
+                daily_avg = top_stats['total'] / 7
+                achievement_text = f"🔥 **{top_username}** is dominating with {daily_avg:.1f} watches per day!"
+            elif timeframe == "month": 
+                daily_avg = top_stats['total'] / 30
+                achievement_text = f"🔥 **{top_username}** is on fire with {daily_avg:.1f} watches per day!"
+            else:  # all time
+                achievement_text = f"🔥 **{top_username}** is the ultimate community champion!"
+            
+            embed.add_field(
+                name="🏆 Top Performer",
+                value=achievement_text,
+                inline=False
+            )
+        
+        # Add thumbnail from a popular show/movie if available
+        if timeframe != "all":
+            # Try to get recent popular content for thumbnail
+            try:
+                sample_user = public_users[0]
+                recent_history = trakt_api.get_user_history(sample_user['trakt_username'], 5)
+                if recent_history:
+                    recent_item = recent_history[0]
+                    content = recent_item.get('show') or recent_item.get('movie')
+                    if content:
+                        tmdb_id = content.get('ids', {}).get('tmdb')
+                        if tmdb_id:
+                            embed.set_thumbnail(url=f"https://image.tmdb.org/t/p/w300/{tmdb_id}.jpg")
+            except:
+                pass
+        
+        embed.set_footer(text=f"🏆 {emoji} {timeframe_title} leaderboard • Use /public to compete!")
+        await interaction.followup.send(embed=embed)
+
+    @bot.tree.command(name="compare", description="Compare watching habits between two users")
+    @app_commands.describe(
+        user1="First user to compare",
+        user2="Second user to compare (leave empty to compare with yourself)"
+    )
+    async def compare_users(interaction: discord.Interaction, user1: discord.Member, user2: Optional[discord.Member] = None):
+        await interaction.response.defer()
+        
+        # If user2 is not specified, compare user1 with the command author
+        if user2 is None:
+            current_user = db.get_user(str(interaction.user.id))
+            if not current_user:
+                await interaction.followup.send("❌ You need to connect your Trakt.tv account first. Use `/connect`")
+                return
+            user2 = interaction.user
+            user2_data = current_user
+        else:
+            user2_data = db.get_user(str(user2.id))
+            if not user2_data:
+                await interaction.followup.send(f"❌ {user2.display_name} hasn't connected their Trakt.tv account.")
+                return
+        
+        # Get first user data
+        user1_data = db.get_user(str(user1.id))
+        if not user1_data:
+            await interaction.followup.send(f"❌ {user1.display_name} hasn't connected their Trakt.tv account.")
+            return
+        
+        # Check privacy settings
+        if not user1_data.get('is_public', False):
+            await interaction.followup.send(f"❌ {user1.display_name}'s profile is private.")
+            return
+        
+        if not user2_data.get('is_public', False) and user2.id != interaction.user.id:
+            await interaction.followup.send(f"❌ {user2.display_name}'s profile is private.")
+            return
+        
+        # Prevent comparing same user
+        if user1.id == user2.id:
+            await interaction.followup.send("❌ Can't compare a user with themselves! Try comparing with someone else.")
+            return
+        
+        user1_username = user1_data['trakt_username']
+        user2_username = user2_data['trakt_username']
+        
+        try:
+            # Get user histories
+            user1_history = trakt_api.get_user_history(user1_username, 100)
+            user2_history = trakt_api.get_user_history(user2_username, 100)
+            
+            if not user1_history or not user2_history:
+                await interaction.followup.send("❌ Not enough data to compare users.")
+                return
+            
+            embed = discord.Embed(
+                title=f"🆚 {user1_username} vs {user2_username}",
+                description="Detailed taste and compatibility comparison",
+                color=0xe74c3c
+            )
+            
+            # Calculate basic stats
+            user1_shows = [h for h in user1_history if 'show' in h]
+            user1_movies = [h for h in user1_history if 'movie' in h]
+            user2_shows = [h for h in user2_history if 'show' in h]
+            user2_movies = [h for h in user2_history if 'movie' in h]
+            
+            # Basic stats comparison
+            stats_text = f"**{user1_username}:**\n"
+            stats_text += f"📺 {len(user1_shows)} episodes • 🎬 {len(user1_movies)} movies\n\n"
+            stats_text += f"**{user2_username}:**\n"
+            stats_text += f"📺 {len(user2_shows)} episodes • 🎬 {len(user2_movies)} movies"
+            
+            embed.add_field(
+                name="📊 Recent Activity Comparison",
+                value=stats_text,
+                inline=False
+            )
+            
+            # Find shared content
+            user1_content = set()
+            user2_content = set()
+            
+            for item in user1_history:
+                content = item.get('show') or item.get('movie')
+                user1_content.add(content['title'])
+            
+            for item in user2_history:
+                content = item.get('show') or item.get('movie')
+                user2_content.add(content['title'])
+            
+            shared_content = user1_content.intersection(user2_content)
+            total_unique = len(user1_content.union(user2_content))
+            
+            # Calculate compatibility score
+            if total_unique > 0:
+                compatibility_score = (len(shared_content) / total_unique) * 100
+            else:
+                compatibility_score = 0
+            
+            # Compatibility visualization
+            compatibility_bars = "█" * int(compatibility_score / 10) + "░" * (10 - int(compatibility_score / 10))
+            compatibility_text = f"**{compatibility_score:.1f}%** {compatibility_bars}\n"
+            
+            if compatibility_score >= 80:
+                compatibility_text += "🔥 **Perfect Match!** They have very similar tastes!"
+            elif compatibility_score >= 60:
+                compatibility_text += "💫 **Great Compatibility!** They'd enjoy each other's recommendations!"
+            elif compatibility_score >= 40:
+                compatibility_text += "✨ **Good Match!** Some overlapping interests!"
+            elif compatibility_score >= 20:
+                compatibility_text += "🤔 **Different Tastes** but could discover new content!"
+            else:
+                compatibility_text += "🌍 **Opposite Tastes** - perfect for expanding horizons!"
+            
+            embed.add_field(
+                name="💝 Compatibility Score",
+                value=compatibility_text,
+                inline=False
+            )
+            
+            # Show shared favorites
+            if shared_content:
+                shared_list = list(shared_content)[:8]
+                shared_text = ""
+                for i, title in enumerate(shared_list, 1):
+                    shared_text += f"{i}. **{title}**\n"
+                
+                if len(shared_content) > 8:
+                    shared_text += f"*...and {len(shared_content) - 8} more*"
+                
+                embed.add_field(
+                    name=f"🤝 Shared Favorites ({len(shared_content)} total)",
+                    value=shared_text,
+                    inline=False
+                )
+            
+            # Recommendations (what one watched that other hasn't)
+            user1_only = user1_content - user2_content
+            user2_only = user2_content - user1_content
+            
+            recommendations_text = ""
+            if user2_only:
+                rec_list = list(user2_only)[:5]
+                recommendations_text += f"**For {user1_username}** (from {user2_username}):\n"
+                for title in rec_list:
+                    recommendations_text += f"• {title}\n"
+            
+            if user1_only and user2_only:
+                recommendations_text += "\n"
+            
+            if user1_only:
+                rec_list = list(user1_only)[:5]
+                recommendations_text += f"**For {user2_username}** (from {user1_username}):\n"
+                for title in rec_list:
+                    recommendations_text += f"• {title}\n"
+            
+            if recommendations_text:
+                embed.add_field(
+                    name="💡 Personalized Recommendations",
+                    value=recommendations_text,
+                    inline=False
+                )
+            
+            # Genre analysis
+            user1_genres = {}
+            user2_genres = {}
+            
+            # Get detailed info for genre analysis (sample recent items)
+            for item in user1_history[:20]:
+                content = item.get('show') or item.get('movie')
+                content_type = 'show' if 'show' in item else 'movie'
+                try:
+                    if content_type == 'show':
+                        detailed = trakt_api.get_show_info(str(content['ids']['trakt']))
+                    else:
+                        detailed = trakt_api.get_movie_info(str(content['ids']['trakt']))
+                    
+                    if detailed and detailed.get('genres'):
+                        for genre in detailed['genres']:
+                            user1_genres[genre] = user1_genres.get(genre, 0) + 1
+                except:
+                    continue
+            
+            for item in user2_history[:20]:
+                content = item.get('show') or item.get('movie')
+                content_type = 'show' if 'show' in item else 'movie'
+                try:
+                    if content_type == 'show':
+                        detailed = trakt_api.get_show_info(str(content['ids']['trakt']))
+                    else:
+                        detailed = trakt_api.get_movie_info(str(content['ids']['trakt']))
+                    
+                    if detailed and detailed.get('genres'):
+                        for genre in detailed['genres']:
+                            user2_genres[genre] = user2_genres.get(genre, 0) + 1
+                except:
+                    continue
+            
+            # Show top genres
+            if user1_genres and user2_genres:
+                user1_top = sorted(user1_genres.items(), key=lambda x: x[1], reverse=True)[:3]
+                user2_top = sorted(user2_genres.items(), key=lambda x: x[1], reverse=True)[:3]
+                
+                genre_text = f"**{user1_username}:** "
+                genre_text += " • ".join([g[0] for g in user1_top])
+                genre_text += f"\n**{user2_username}:** "
+                genre_text += " • ".join([g[0] for g in user2_top])
+                
+                embed.add_field(
+                    name="🎭 Favorite Genres",
+                    value=genre_text,
+                    inline=False
+                )
+            
+            # Activity patterns
+            user1_activity_score = len(user1_history)
+            user2_activity_score = len(user2_history)
+            
+            if user1_activity_score > user2_activity_score:
+                more_active = user1_username
+                activity_diff = user1_activity_score - user2_activity_score
+            else:
+                more_active = user2_username
+                activity_diff = user2_activity_score - user1_activity_score
+            
+            if activity_diff == 0:
+                activity_text = "🤝 **Equal Activity** - perfectly matched watching pace!"
+            elif activity_diff <= 5:
+                activity_text = f"⚖️ **Similar Activity** - {more_active} is slightly more active"
+            elif activity_diff <= 15:
+                activity_text = f"📈 **{more_active}** is noticeably more active (+{activity_diff} items)"
+            else:
+                activity_text = f"🚀 **{more_active}** is much more active (+{activity_diff} items)"
+            
+            embed.add_field(
+                name="⚡ Activity Comparison",
+                value=activity_text,
+                inline=False
+            )
+            
+            # Fun fact
+            fun_facts = [
+                f"🎯 They've discovered **{len(shared_content)}** titles in common!",
+                f"🔍 **{len(user1_content.union(user2_content))}** unique titles between them both!",
+                f"📚 **{len(user1_only) + len(user2_only)}** potential recommendations available!",
+                f"🎪 Their combined watching power: **{len(user1_history) + len(user2_history)}** recent items!"
+            ]
+            
+            import random
+            embed.add_field(
+                name="🎉 Fun Fact",
+                value=random.choice(fun_facts),
+                inline=False
+            )
+            
+            # Add thumbnail from a shared favorite
+            if shared_content:
+                try:
+                    shared_title = list(shared_content)[0]
+                    search_results = trakt_api.search_content(shared_title)
+                    if search_results:
+                        content = search_results[0].get('show') or search_results[0].get('movie')
+                        tmdb_id = content.get('ids', {}).get('tmdb')
+                        if tmdb_id:
+                            embed.set_thumbnail(url=f"https://image.tmdb.org/t/p/w300/{tmdb_id}.jpg")
+                except:
+                    pass
+            
+            # Add note about who requested the comparison
+            comparison_type = "yourself" if user2.id == interaction.user.id else f"{user2.display_name}"
+            embed.set_footer(text=f"🆚 Comparison requested by {interaction.user.display_name}")
+            await interaction.followup.send(embed=embed)
+            
+        except Exception as e:
+            await interaction.followup.send(f"❌ Error comparing users: {str(e)}")
+            print(f"Compare error: {e}")
+
+    @bot.tree.command(name="arena", description="🎬 Join the movie challenge Arena! Daily movie duels & team battles")
+    async def arena_command(interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        # Check if user is connected
+        user = db.get_user(str(interaction.user.id))
+        if not user:
+            await interaction.followup.send("❌ You need to connect your Trakt.tv account first. Use `/connect`")
+            return
+        
+        # Get arena status
+        arena_data = db.get_arena_status()
+        
+        embed = discord.Embed(
+            title="🎬⚔️ ARENA - Movie Challenge Hub",
+            description="**Daily movie duels • Team battles • Epic challenges**",
+            color=0xff4500
+        )
+        
+        # Show current challenge
+        if arena_data and arena_data.get('current_challenge'):
+            challenge = arena_data['current_challenge']
+            embed.add_field(
+                name=f"🎯 Today's Challenge: {challenge['name']}",
+                value=f"**{challenge['description']}**\n"
+                      f"⏰ Ends: <t:{challenge['end_time']}:R>\n"
+                      f"🏆 Reward: **{challenge['points']} points**",
+                inline=False
+            )
+        else:
+            embed.add_field(
+                name="🎯 No Active Challenge",
+                value="Waiting for challengers to join...",
+                inline=False
+            )
+        
+        # Show arena stats
+        participants = db.get_arena_participants()
+        teams = db.get_arena_teams()
+        
+        if participants:
+            embed.add_field(
+                name="⚔️ Arena Status",
+                value=f"👥 **{len(participants)} gladiators** ready\n"
+                      f"🛡️ **{len(teams)} teams** formed\n"
+                      f"🔥 **{len([p for p in participants if p.get('active_today', False)])} active** today",
+                inline=True
+            )
+        
+        # Show leaderboard preview
+        if participants:
+            top_gladiators = sorted(participants, key=lambda x: x.get('points', 0), reverse=True)[:3]
+            leaderboard_text = ""
+            medals = ["🥇", "🥈", "🥉"]
+            for i, gladiator in enumerate(top_gladiators):
+                username = gladiator['username']
+                points = gladiator.get('points', 0)
+                leaderboard_text += f"{medals[i]} **{username}** • {points} pts\n"
+            
+            embed.add_field(
+                name="🏆 Top Gladiators",
+                value=leaderboard_text,
+                inline=True
+            )
+        
+        # Action buttons
+        view = ArenaView(interaction.user.id)
+        
+        embed.set_footer(text="🎬 Arena resets weekly • Only movie watchers survive!")
+        await interaction.followup.send(embed=embed, view=view)
+
+    @bot.tree.command(name="arena-complete", description="🏆 Mark current arena challenge as completed")
+    async def arena_complete(interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        # Check if user is in arena
+        if not db.is_in_arena(str(interaction.user.id)):
+            await interaction.followup.send("❌ You're not in the Arena! Use `/arena` to join.", ephemeral=True)
+            return
+        
+        # Check if there's an active challenge
+        challenge = db.get_arena_challenge()
+        if not challenge:
+            await interaction.followup.send("❌ No active challenge right now!", ephemeral=True)
+            return
+        
+        # Check if challenge expired
+        import time
+        if time.time() > challenge.get('end_time', 0):
+            await interaction.followup.send("❌ Challenge has expired! Wait for the next one.", ephemeral=True)
+            return
+        
+        # Basic validation - challenge must be at least 30 minutes old
+        challenge_start = challenge.get('end_time', 0) - (24 * 60 * 60)  # 24h ago
+        time_since_start = time.time() - challenge_start
+        
+        if time_since_start < 30 * 60:  # 30 minutes minimum
+            minutes_left = int((30 * 60 - time_since_start) / 60)
+            await interaction.followup.send(
+                f"⏰ Challenge just started! Wait {minutes_left} more minutes before completing.\n"
+                f"*This prevents instant completions and gives everyone fair time.*", 
+                ephemeral=True
+            )
+            return
+        
+        # Complete challenge
+        success = db.complete_arena_challenge(str(interaction.user.id))
+        
+        if success:
+            user = db.get_user(str(interaction.user.id))
+            participant = None
+            for p in db.get_arena_participants():
+                if p['discord_id'] == str(interaction.user.id):
+                    participant = p
+                    break
+            
+            embed = discord.Embed(
+                title="🏆 Challenge Completed!",
+                description=f"**{user['trakt_username']}** completed: **{challenge['name']}**",
+                color=0x00ff00
+            )
+            
+            embed.add_field(
+                name="🎯 Challenge",
+                value=challenge['description'],
+                inline=False
+            )
+            
+            embed.add_field(
+                name="📊 Rewards",
+                value=f"🎬 **+{challenge['points']} points**\n"
+                      f"🏆 Total: **{participant['points']} points**\n"
+                      f"🥇 Wins: **{participant['challenges_won']}**",
+                inline=True
+            )
+            
+            embed.add_field(
+                name="🛡️ Team",
+                value=f"**{participant.get('team', 'No Team')}**",
+                inline=True
+            )
+            
+            embed.set_footer(text="Honor system - thanks for playing fairly! 🎬")
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.followup.send("❌ Already completed this challenge or failed to record completion!", ephemeral=True)
+
+    @bot.tree.command(name="arena-reset", description="🔄 Reset the entire Arena (Admin only)")
+    async def arena_reset(interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        # Simple admin check - you can make this more sophisticated
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.followup.send("❌ Admin only command!", ephemeral=True)
+            return
+        
+        success = db.reset_arena()
+        
+        if success:
+            embed = discord.Embed(
+                title="🔄 Arena Reset!",
+                description="The Arena has been completely reset!",
+                color=0xff6600
+            )
+            embed.add_field(
+                name="🎯 What was reset",
+                value="• All participants removed\n"
+                      "• Teams disbanded\n"
+                      "• Challenges cleared\n"
+                      "• Points reset to zero",
+                inline=False
+            )
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.followup.send("❌ Failed to reset arena!", ephemeral=True)
+
+    @bot.tree.command(name="arena-status", description="📊 Check your Arena status and current challenge")
+    async def arena_status(interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        # Check if user is in arena
+        if not db.is_in_arena(str(interaction.user.id)):
+            await interaction.followup.send("❌ You're not in the Arena! Use `/arena` to join.", ephemeral=True)
+            return
+        
+        user = db.get_user(str(interaction.user.id))
+        participant = None
+        for p in db.get_arena_participants():
+            if p['discord_id'] == str(interaction.user.id):
+                participant = p
+                break
+        
+        if not participant:
+            await interaction.followup.send("❌ Arena data not found!", ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title=f"⚔️ {participant['username']}'s Arena Status",
+            color=0x0099ff
+        )
+        
+        # Personal stats
+        embed.add_field(
+            name="📊 Your Stats",
+            value=f"🏆 **{participant['points']} points**\n"
+                  f"🥇 **{participant['challenges_won']} challenges won**\n"
+                  f"🛡️ **{participant.get('team', 'No Team')}**",
+            inline=True
+        )
+        
+        # Current challenge
+        challenge = db.get_arena_challenge()
+        if challenge:
+            import time
+            time_left = challenge.get('end_time', 0) - time.time()
+            hours_left = max(0, int(time_left / 3600))
+            
+            embed.add_field(
+                name="🎯 Current Challenge",
+                value=f"**{challenge['name']}**\n"
+                      f"{challenge['description']}\n"
+                      f"⏰ **{hours_left}h remaining**\n"
+                      f"🏆 **{challenge['points']} points**",
+                inline=True
+            )
+        else:
+            embed.add_field(
+                name="🎯 Current Challenge",
+                value="No active challenge",
+                inline=True
+            )
+        
+        # Team stats
+        teams = db.get_arena_teams()
+        user_team = participant.get('team')
+        
+        if teams and user_team:
+            team_info = next((t for t in teams if t['name'] == user_team), None)
+            if team_info:
+                # Calculate team points
+                team_points = 0
+                team_wins = 0
+                participants = db.get_arena_participants()
+                
+                for member_username in team_info['members']:
+                    for p in participants:
+                        if p['username'] == member_username:
+                            team_points += p.get('points', 0)
+                            team_wins += p.get('challenges_won', 0)
+                
+                embed.add_field(
+                    name=f"🛡️ {user_team} Stats",
+                    value=f"👥 **{len(team_info['members'])} members**\n"
+                          f"🏆 **{team_points} total points**\n"
+                          f"🥇 **{team_wins} total wins**",
+                    inline=False
+                )
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    @bot.tree.command(name="arena-new-challenge", description="🎲 Start a new random challenge (Admin only)")
+    async def arena_new_challenge(interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        # Simple admin check
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.followup.send("❌ Admin only command!", ephemeral=True)
+            return
+        
+        # Check if arena has participants
+        participants = db.get_arena_participants()
+        if not participants:
+            await interaction.followup.send("❌ No participants in Arena!", ephemeral=True)
+            return
+        
+        challenges = [
+            {
+                "name": "Genre Master",
+                "description": "Watch any **Horror** movie you haven't seen",
+                "points": 10,
+                "type": "genre",
+                "target": "horror"
+            },
+            {
+                "name": "Decade Dive", 
+                "description": "Watch a movie from the **1990s**",
+                "points": 15,
+                "type": "decade",
+                "target": "1990s"
+            },
+            {
+                "name": "Rating Rush",
+                "description": "Watch a movie with **8.0+ rating** on Trakt",
+                "points": 20,
+                "type": "rating", 
+                "target": 8.0
+            },
+            {
+                "name": "Speed Run",
+                "description": "Watch the **shortest movie** (under 90 min)",
+                "points": 12,
+                "type": "runtime",
+                "target": 90
+            },
+            {
+                "name": "Deep Cut",
+                "description": "Watch a movie with **<1000 votes** on Trakt",
+                "points": 25,
+                "type": "obscure",
+                "target": 1000
+            },
+            {
+                "name": "Classic Quest",
+                "description": "Watch a movie from **before 1980**",
+                "points": 18,
+                "type": "classic",
+                "target": 1980
+            },
+            {
+                "name": "Foreign Film",
+                "description": "Watch a **non-English** movie",
+                "points": 22,
+                "type": "language",
+                "target": "non-english"
+            },
+            {
+                "name": "Action Pack",
+                "description": "Watch any **Action** movie",
+                "points": 12,
+                "type": "genre",
+                "target": "action"
+            }
+        ]
+        
+        import random
+        challenge = random.choice(challenges)
+        
+        # Set 24 hour timer
+        import time
+        end_time = int(time.time()) + (24 * 60 * 60)
+        challenge['end_time'] = end_time
+        
+        db.set_arena_challenge(challenge)
+        
+        # Notify about new challenge
+        embed = discord.Embed(
+            title=f"🎯 NEW Arena Challenge: {challenge['name']}",
+            description=f"**{challenge['description']}**\n\n"
+                       f"⏰ **24 hours** to complete\n"
+                       f"🏆 **{challenge['points']} points** for completion\n"
+                       f"🥇 **+5 bonus points** for first team to complete!",
+            color=0xff4500
+        )
+        
+        embed.add_field(
+            name="📋 How to Complete",
+            value="Use `/arena-complete` after watching a movie that matches!",
+            inline=False
+        )
+        
+        await interaction.followup.send(embed=embed)
+
+    @bot.tree.command(name="arena-leave", description="🚪 Leave the Arena permanently")
+    async def arena_leave(interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        # Check if user is in arena
+        if not db.is_in_arena(str(interaction.user.id)):
+            await interaction.followup.send("❌ You're not in the Arena!", ephemeral=True)
+            return
+        
+        user = db.get_user(str(interaction.user.id))
+        success = db.leave_arena(str(interaction.user.id))
+        
+        if success:
+            embed = discord.Embed(
+                title="🚪 Left Arena",
+                description=f"**{user['trakt_username']}** has left the Arena!",
+                color=0xff6600
+            )
+            embed.add_field(
+                name="⚠️ What happens now",
+                value="• Removed from all teams\n"
+                      "• Points and progress lost\n"
+                      "• Teams will be auto-rebalanced\n"
+                      "• Can rejoin anytime with `/arena`",
+                inline=False
+            )
+            await interaction.followup.send(embed=embed)
+            
+            # Auto-rebalance remaining teams
+            teams = db.get_arena_teams()
+            if teams:
+                db.rebalance_all_arena_teams()
+        else:
+            await interaction.followup.send("❌ Failed to leave arena!", ephemeral=True)
+
+class ArenaView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=None)  # Never timeout - critical fix!
+        self.user_id = user_id
+    
+    @discord.ui.button(label="⚔️ Join Arena", style=discord.ButtonStyle.danger, emoji="🎬")
+    async def join_arena(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        
+        user = db.get_user(str(interaction.user.id))
+        if not user or not user.get('is_public', False):
+            await interaction.followup.send("❌ You need a public Trakt profile to join Arena! Use `/public`", ephemeral=True)
+            return
+        
+        # Check if already in arena
+        if db.is_in_arena(str(interaction.user.id)):
+            await interaction.followup.send("❌ You're already in the Arena, gladiator!", ephemeral=True)
+            return
+        
+        # Add user to arena
+        success = db.add_arena_participant(str(interaction.user.id), user['trakt_username'])
+        
+        if success:
+            participants = db.get_arena_participants()
+            teams = db.get_arena_teams()
+            
+            # If arena already has teams, auto-balance the new joiner
+            if teams:
+                balanced_team = db.balance_arena_teams(str(interaction.user.id), user['trakt_username'])
+                
+                embed = discord.Embed(
+                    title="⚔️ Joined Mid-Battle!",
+                    description=f"**{user['trakt_username']}** joined the ongoing Arena!",
+                    color=0x00ff00
+                )
+                embed.add_field(
+                    name="🛡️ Auto-Balanced",
+                    value=f"Added to **{balanced_team}** to keep teams fair!",
+                    inline=False
+                )
+                embed.add_field(
+                    name="🎯 Current Challenge",
+                    value="Check current challenge and start competing immediately!",
+                    inline=False
+                )
+                
+                await interaction.followup.send(embed=embed)
+                
+            else:
+                # No teams yet, normal join flow
+                embed = discord.Embed(
+                    title="⚔️ Welcome to Arena!",
+                    description=f"**{user['trakt_username']}** has entered the movie battleground!",
+                    color=0x00ff00
+                )
+                
+                if len(participants) >= 4:
+                    embed.add_field(
+                        name="🛡️ Ready to Form Teams!",
+                        value="Click **Team Setup** to vote on team sizes and start battling!",
+                        inline=False
+                    )
+                else:
+                    embed.add_field(
+                        name="🎯 What's Next?",
+                        value=f"• Wait for {4 - len(participants)} more gladiators to join\n"
+                              "• Vote on team sizes when we hit 4+ members\n" 
+                              "• Battle in daily movie challenges\n"
+                              "• Climb the leaderboard!",
+                        inline=False
+                    )
+                
+                await interaction.followup.send(embed=embed)
+        else:
+            await interaction.followup.send("❌ Failed to join Arena! Try again.", ephemeral=True)
+    
+    @discord.ui.button(label="🛡️ Team Setup", style=discord.ButtonStyle.primary, emoji="👥")
+    async def team_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        
+        participants = db.get_arena_participants()
+        if len(participants) < 4:
+            await interaction.followup.send(f"❌ Need at least 4 gladiators! Currently have {len(participants)}.", ephemeral=True)
+            return
+        
+        # Check if teams already exist
+        teams = db.get_arena_teams()
+        if teams:
+            embed = discord.Embed(
+                title="🛡️ Teams Already Formed",
+                description="Arena is running! New joiners are auto-balanced.",
+                color=0x0099ff
+            )
+            
+            team_text = ""
+            for i, team in enumerate(teams, 1):
+                team_text += f"**Team {i}** ({len(team['members'])} members): {', '.join(team['members'])}\n"
+            
+            embed.add_field(name="⚔️ Current Teams", value=team_text, inline=False)
+            
+            # Add rebalance option
+            view = ArenaManagementView()
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            return
+        
+        # Start team size voting
+        embed = discord.Embed(
+            title="🛡️ Team Formation Vote",
+            description=f"**{len(participants)} gladiators** ready! How should we form teams?",
+            color=0x0099ff
+        )
+        
+        embed.add_field(
+            name="⚖️ Voting Rules",
+            value="• Majority vote decides team size\n"
+                  "• After teams form, vote to start challenges\n"
+                  "• Arena stays open for late joiners!",
+            inline=False
+        )
+        
+        view = TeamVoteView()
+        await interaction.followup.send(embed=embed, view=view)
+    
+    @discord.ui.button(label="🏆 Leaderboard", style=discord.ButtonStyle.secondary, emoji="📊")
+    async def show_leaderboard(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        
+        participants = db.get_arena_participants()
+        if not participants:
+            await interaction.followup.send("❌ No gladiators in Arena yet!", ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title="🏆 Arena Leaderboard",
+            description="**Hall of Movie Champions**",
+            color=0xffd700
+        )
+        
+        # Sort by points
+        ranked_gladiators = sorted(participants, key=lambda x: x.get('points', 0), reverse=True)
+        
+        leaderboard_text = ""
+        medals = ["🥇", "🥈", "🥉"]
+        
+        for i, gladiator in enumerate(ranked_gladiators[:10], 1):
+            username = gladiator['username']
+            points = gladiator.get('points', 0)
+            wins = gladiator.get('challenges_won', 0)
+            team = gladiator.get('team', 'No Team')
+            
+            if i <= 3:
+                rank_emoji = medals[i-1]
+            else:
+                rank_emoji = f"{i}."
+            
+            leaderboard_text += f"{rank_emoji} **{username}** ({team}) • {points} pts • {wins} wins\n"
+        
+        embed.add_field(
+            name="🎬 Movie Gladiators",
+            value=leaderboard_text,
+            inline=False
+        )
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+class ArenaManagementView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)  # Never timeout - critical fix!
+    
+    @discord.ui.button(label="⚖️ Rebalance Teams", style=discord.ButtonStyle.secondary)
+    async def rebalance_teams(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        
+        # Rebalance all teams
+        teams = db.rebalance_all_arena_teams()
+        
+        embed = discord.Embed(
+            title="⚖️ Teams Rebalanced!",
+            description="All teams have been fairly redistributed!",
+            color=0x00ff00
+        )
+        
+        team_text = ""
+        for i, team in enumerate(teams, 1):
+            team_text += f"**Team {i}** ({len(team['members'])} members): {', '.join(team['members'])}\n"
+        
+        embed.add_field(name="🛡️ New Team Distribution", value=team_text, inline=False)
+        
+        await interaction.followup.send(embed=embed)
+
+class TeamVoteView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)  # Never timeout - critical fix!
+        # Load persistent voting state from database
+        self.votes = db.get_arena_vote_state().get('size_votes', {})
+        self.start_votes = set(db.get_arena_vote_state().get('start_votes', []))
+    
+    @discord.ui.button(label="👥 Teams of 2", style=discord.ButtonStyle.primary)
+    async def vote_pairs(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.votes[str(interaction.user.id)] = 2
+        db.save_arena_vote_state({'size_votes': self.votes, 'start_votes': list(self.start_votes)})
+        await interaction.response.send_message("✅ Voted for teams of 2!", ephemeral=True)
+        await self.check_vote_completion(interaction)
+    
+    @discord.ui.button(label="🛡️ Teams of 3", style=discord.ButtonStyle.primary) 
+    async def vote_trios(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.votes[str(interaction.user.id)] = 3
+        db.save_arena_vote_state({'size_votes': self.votes, 'start_votes': list(self.start_votes)})
+        await interaction.response.send_message("✅ Voted for teams of 3!", ephemeral=True)
+        await self.check_vote_completion(interaction)
+    
+    @discord.ui.button(label="⚔️ Teams of 4+", style=discord.ButtonStyle.primary)
+    async def vote_squads(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.votes[str(interaction.user.id)] = 4
+        db.save_arena_vote_state({'size_votes': self.votes, 'start_votes': list(self.start_votes)})
+        await interaction.response.send_message("✅ Voted for larger teams!", ephemeral=True)
+        await self.check_vote_completion(interaction)
+    
+    @discord.ui.button(label="🚀 START ARENA", style=discord.ButtonStyle.success, emoji="⚡")
+    async def start_arena(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Check if teams are formed first
+        teams = db.get_arena_teams()
+        if not teams:
+            await interaction.response.send_message("❌ Form teams first before starting!", ephemeral=True)
+            return
+        
+        self.start_votes.add(str(interaction.user.id))
+        db.save_arena_vote_state({'size_votes': self.votes, 'start_votes': list(self.start_votes)})
+        
+        participants = db.get_arena_participants()
+        needed_votes = max(2, len(participants) // 2)  # At least 2 votes needed
+        
+        if len(self.start_votes) >= needed_votes:
+            await interaction.response.defer()
+            # Clear voting state after successful start
+            db.clear_arena_vote_state()
+            await self.start_daily_challenge(interaction)
+        else:
+            await interaction.response.send_message(
+                f"✅ Voted to start! ({len(self.start_votes)}/{needed_votes} votes needed)", 
+                ephemeral=True
+            )
+    
+    async def check_vote_completion(self, interaction):
+        participants = db.get_arena_participants()
+        
+        # If majority voted, form teams
+        if len(self.votes) >= len(participants) // 2 + 1:
+            # Count votes
+            vote_counts = {}
+            for vote in self.votes.values():
+                vote_counts[vote] = vote_counts.get(vote, 0) + 1
+            
+            # Handle ties by picking random winner
+            max_votes = max(vote_counts.values())
+            tied_options = [size for size, count in vote_counts.items() if count == max_votes]
+            
+            import random
+            winning_size = random.choice(tied_options) if len(tied_options) > 1 else tied_options[0]
+            
+            # Form teams
+            teams = db.create_arena_teams(winning_size)
+            
+            embed = discord.Embed(
+                title="🛡️ Teams Formed!",
+                description=f"**Teams of {winning_size}** won the vote!" + 
+                           (f" (tie-breaker used)" if len(tied_options) > 1 else ""),
+                color=0x00ff00
+            )
+            
+            team_text = ""
+            for i, team in enumerate(teams, 1):
+                team_text += f"**Team {i}:** {', '.join(team['members'])}\n"
+            
+            embed.add_field(name="⚔️ Battle Teams", value=team_text, inline=False)
+            embed.add_field(
+                name="🚀 Ready to Start?", 
+                value="Vote **START ARENA** to begin daily challenges!\n"
+                      "⚠️ Arena stays open for late joiners (auto-balanced)",
+                inline=False
+            )
+            
+            # Enable start button by updating the view
+            self.start_arena.disabled = False
+            await interaction.edit_original_response(embed=embed, view=self)
+    
+    async def start_daily_challenge(self, interaction):
+        """Start the first daily challenge"""
+        challenges = [
+            {
+                "name": "Genre Master",
+                "description": "Watch any **Horror** movie you haven't seen",
+                "points": 10,
+                "type": "genre",
+                "target": "horror"
+            },
+            {
+                "name": "Decade Dive", 
+                "description": "Watch a movie from the **1990s**",
+                "points": 15,
+                "type": "decade",
+                "target": "1990s"
+            },
+            {
+                "name": "Rating Rush",
+                "description": "Watch a movie with **8.0+ rating** on Trakt",
+                "points": 20,
+                "type": "rating", 
+                "target": 8.0
+            },
+            {
+                "name": "Speed Run",
+                "description": "Watch the **shortest movie** (under 90 min)",
+                "points": 12,
+                "type": "runtime",
+                "target": 90
+            },
+            {
+                "name": "Deep Cut",
+                "description": "Watch a movie with **<1000 votes** on Trakt",
+                "points": 25,
+                "type": "obscure",
+                "target": 1000
+            },
+            {
+                "name": "Classic Quest",
+                "description": "Watch a movie from **before 1980**",
+                "points": 18,
+                "type": "classic",
+                "target": 1980
+            },
+            {
+                "name": "Foreign Film",
+                "description": "Watch a **non-English** movie",
+                "points": 22,
+                "type": "language",
+                "target": "non-english"
+            },
+            {
+                "name": "Action Pack",
+                "description": "Watch any **Action** movie",
+                "points": 12,
+                "type": "genre",
+                "target": "action"
+            }
+        ]
+        
+        import random
+        challenge = random.choice(challenges)
+        
+        # Set 24 hour timer
+        import time
+        end_time = int(time.time()) + (24 * 60 * 60)
+        challenge['end_time'] = end_time
+        
+        db.set_arena_challenge(challenge)
+        db.set_arena_active(True)
+        
+        # Notify participants
+        challenge_embed = discord.Embed(
+            title=f"🎯 Arena Challenge: {challenge['name']}",
+            description=f"**{challenge['description']}**\n\n"
+                       f"⏰ **24 hours** to complete\n"
+                       f"🏆 **{challenge['points']} points** for completion\n"
+                       f"🥇 **+5 bonus points** for first team to complete!\n"
+                       f"🚪 **Arena stays open** for late joiners!",
+            color=0xff4500
+        )
+        
+        challenge_embed.add_field(
+            name="📋 How to Complete",
+            value="• Watch a movie that matches the challenge\n"
+                  "• Mark it as watched on Trakt\n"
+                  "• Bot will auto-detect and award points\n"
+                  "• First team completion gets bonus!",
+            inline=False
+        )
+        
+        await interaction.followup.send(embed=challenge_embed)
+        
+        # Disable all voting buttons since arena started
+        for item in self.children:
+            if item.label != "🚀 START ARENA":
+                item.disabled = True
+        self.start_arena.label = "✅ ARENA STARTED"
+        self.start_arena.disabled = True
+        
+        await interaction.edit_original_response(view=self) 

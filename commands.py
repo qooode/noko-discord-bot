@@ -387,8 +387,25 @@ def register_help_commands():
             name="👥 Social & More",
             value="`/community` - Live community activity\n"
                   "`/trends [days]` - Community trends\n"
+                  "`/leaderboard [timeframe] [category]` - Community leaderboard\n"
+                  "`/compare <user1> [user2]` - Compare any two users' tastes\n"
                   "`/watching [user]` - Current watching\n"
-                  "`/remind <show>` - Set reminders",
+                  "`/last [user] [count]` - See recent watches\n"
+                  "`/stats` - View your Trakt.tv statistics\n"
+                  "`/remind <show>` - Set reminders\n"
+                  "`/reminders` - List active reminders",
+            inline=False
+        )
+        
+        # Arena Commands
+        embed.add_field(
+            name="🎬 Arena Commands",
+            value="`/arena` - 🎬 Join daily movie challenge battles!\n"
+                  "`/arena-status` - 📊 Check your Arena status\n"
+                  "`/arena-complete` - 🏆 Mark challenge as completed\n"
+                  "`/arena-leave` - 🚪 Leave Arena permanently\n"
+                  "`/arena-reset` - 🔄 Reset Arena (Admin only)\n"
+                  "`/arena-new-challenge` - 🎲 Start new challenge (Admin)",
             inline=False
         )
         
