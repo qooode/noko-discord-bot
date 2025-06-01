@@ -43,10 +43,17 @@ async def check_reminders():
     """Check for new episodes and send reminders."""
     print("Checking for new episodes...")
 
-# Import command modules (this registers all commands)
+# Import command modules and initialize them
+import views
 import commands
 import social
 import management
+
+# Initialize modules with shared objects
+views.init_views(trakt_api, db)
+commands.init_commands(bot, trakt_api, db)
+social.init_social(bot, trakt_api, db)
+management.init_management(bot, trakt_api, db)
 
 if __name__ == "__main__":
     bot.run(config.DISCORD_TOKEN) 

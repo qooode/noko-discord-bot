@@ -1,7 +1,16 @@
 import discord
 from discord import app_commands
 from datetime import datetime
-from main import trakt_api, db
+
+# Initialize these as None and set them later
+trakt_api = None
+db = None
+
+def init_views(api, database):
+    """Initialize the views module with shared objects"""
+    global trakt_api, db
+    trakt_api = api
+    db = database
 
 class SearchView(discord.ui.View):
     def __init__(self, results, query, user_id):

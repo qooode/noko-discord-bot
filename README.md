@@ -22,6 +22,9 @@ A **powerful and interactive** Discord bot for managing your Trakt.tv account wi
 - **Context Menu** - Right-click any message to extract show/movie info
 
 ### 🎬 **Enhanced Content Management**
+- **Advanced Episode Management** - Season/episode tracking with interactive UI
+- **Progress Tracking** - Visual progress bars and completion stats
+- **Continue Watching** - Smart detection of partially watched shows
 - **One-click Actions** - Interactive buttons for all operations
 - **Smart Reminders** - Custom timing and messages for episode notifications
 - **Rich Statistics** - Comprehensive stats with recent activity tracking
@@ -37,12 +40,39 @@ A **powerful and interactive** Discord bot for managing your Trakt.tv account wi
 - **📈 Community Trends** - Aggregated stats and trending content
 - **🔥 Social Discovery** - Find what's hot in your community
 
+## 🏗️ Architecture
+
+### **Modular Design**
+The bot features a clean, modular architecture for easy maintenance and development:
+
+```
+📁 Project Structure
+├── main.py          # Bot initialization, Discord setup, entry point
+├── commands.py      # Basic commands, account management, content operations
+├── management.py    # Advanced show/episode management, progress tracking
+├── social.py        # Community features, trends, social interactions
+├── views.py         # Discord UI components (buttons, modals, dropdowns)
+├── trakt_api.py     # Trakt.tv API wrapper and methods
+├── database.py      # User data and reminder management
+├── config.py        # Configuration and environment variables
+└── requirements.txt # Python dependencies
+```
+
+### **Clean Separation of Concerns**
+- **main.py** - Core bot setup, event handling, background tasks
+- **commands.py** - User-facing slash commands and basic operations
+- **management.py** - Complex show management and episode tracking
+- **social.py** - Community features and social interactions
+- **views.py** - All Discord UI components and interactive elements
+- **trakt_api.py** - Trakt.tv API integration and data handling
+- **database.py** - Persistent data storage and user management
+
 ## Quick Setup
 
 1. **Clone and Install**
    ```bash
-   git clone https://github.com/qooode/noko-discord-bot.git
-   cd noko-discord-bot
+   git clone https://github.com/qooode/trakt-discord-bot.git
+   cd trakt-discord-bot
    pip install -r requirements.txt
    ```
 
@@ -79,7 +109,7 @@ A **powerful and interactive** Discord bot for managing your Trakt.tv account wi
 
 5. **Run the Bot**
    ```bash
-   python noko.py
+   python main.py
    ```
 
 ## Server Deployment
@@ -88,18 +118,18 @@ For production deployment on a server:
 
 ```bash
 # Kill any existing bot processes
-pkill -f "python.*noko.py"
+pkill -f "python.*main.py"
 
 # Clean up and clone fresh
-mkdir noko
+mkdir trakt-bot
 cd ..
-rm -rf noko
-git clone https://github.com/qooode/noko-discord-bot.git noko
+rm -rf trakt-bot
+git clone https://github.com/qooode/trakt-discord-bot.git trakt-bot
 
 # Set up virtual environment
 python3 -m venv venv
 source venv/bin/activate
-cd noko
+cd trakt-bot
 
 # Install dependencies
 pip install -r requirements.txt
@@ -108,13 +138,13 @@ pip install -r requirements.txt
 nano .env
 
 # Run bot in background with logging
-nohup python noko.py > bot.log 2>&1 &
+nohup python main.py > bot.log 2>&1 &
 ```
 
 **Managing the bot:**
 ```bash
 # Check if bot is running
-ps aux | grep noko.py
+ps aux | grep main.py
 
 # Stop the bot (replace PID with actual process ID)
 kill [PID]
@@ -123,47 +153,61 @@ kill [PID]
 tail -f bot.log
 ```
 
-## 🚀 Advanced Slash Commands
+## 🚀 Comprehensive Command Reference
 
-### **Account Management**
+### **🔐 Account Management**
 - `/connect` - Link your Trakt.tv account with guided setup
+- `/authorize <code>` - Complete authorization with Trakt.tv code
 - `/public` / `/private` - Control profile visibility
 - `/stats` - View comprehensive account statistics
 
-### **Smart Content Discovery** 
+### **🔍 Smart Content Discovery** 
 - `/search <query>` - **Interactive search** with pagination and action buttons
   - Browse results with ◀️ ▶️ buttons
   - Select items from dropdown for detailed info
   - One-click mark watched, add to watchlist, set reminders
-- `/quick_action <content> <action>` - **One-command workflow**
-  - Autocomplete content names as you type
-  - Choose: Mark Watched, Watchlist, Set Reminder, Get Info
 - `/info <show/movie>` - Detailed info **with action buttons**
 
-### **Advanced Content Management**
+### **🎬 Content Management**
 - `/watched <show/movie>` - Mark as watched (with autocomplete)
-- `/unwatch <show/movie>` - Remove from watched (with autocomplete)  
 - `/watchlist <show/movie>` - Add to watchlist (with autocomplete)
 
-### **Enhanced Reminders**
+### **📺 Advanced Show Management**
+- `/progress <show>` - **Visual progress tracking** with interactive management
+  - View completion percentages per season
+  - Interactive season/episode management
+  - Progress bars and statistics
+- `/manage <show>` - **Complete show management** interface
+  - Season selection with episode counts
+  - Individual episode tracking
+  - Mark/unmark episodes and seasons
+- `/continue` - **Smart continue watching** - Find shows you can continue
+- `/episode <show> <season> <episode>` - **Direct episode management**
+
+### **🔔 Enhanced Reminders**
 - `/remind <show>` - **Custom reminder setup** with modal form
   - Set hours before episode airs
   - Add custom reminder messages
   - Interactive setup with buttons
-- `/unremind <show>` - Remove reminders (with autocomplete)
 - `/reminders` - List all active reminders
 
-### **Social Features**
+### **👥 Social & Community Features**
 - `/watching [user]` - See current watching activity
 - `/last [user] [count]` - Recent watches (1-10 items)
 - `/community` - **Live community activity feed** 🔴
+  - Real-time watching activity
+  - Trending shows and movies
+  - Active user counts and stats
 - `/trends [days]` - **Community trends & analytics** (1-14 days)
+  - Popular content over time
+  - Most active community members
+  - Aggregated watching statistics
 
-### **Context Menu Commands** (Right-click)
-- **"Quick Trakt Info"** - Right-click any message to extract show/movie info
-
-### **Help & Discovery**
+### **💡 Help & Discovery**
 - `/help` - **Complete command guide** with examples and getting started tips
+
+### **🖱️ Context Menu Commands** (Right-click)
+- **"Quick Trakt Info"** - Right-click any message to extract show/movie info
 
 ## 🎮 Interactive Features
 
@@ -358,8 +402,46 @@ discord.errors.PrivilegedIntentsRequired: Shard ID None is requesting privileged
 - Check the bot has proper permissions in your Discord server
 - Slash commands may take a few minutes to sync when first starting
 - Check `bot.log` for error messages
+- Ensure all required files are present:
+  - `main.py` - Entry point
+  - `commands.py` - Command definitions
+  - `management.py` - Show management
+  - `social.py` - Community features
+  - `views.py` - UI components
+  - `trakt_api.py` - API integration
+  - `database.py` - Data management
+  - `config.py` - Configuration
 
 ### 🎮 Interactive Features Not Working
 - Ensure your Discord client is up to date
 - Some features require newer Discord versions
-- Mobile Discord may have limited interactive support 
+- Mobile Discord may have limited interactive support
+
+### 🐛 Development & Debugging
+- Use `python main.py` to run in development mode
+- Check console output for detailed error messages
+- Enable debug logging by setting environment variable: `DISCORD_DEBUG=True`
+- Each module can be tested independently for troubleshooting
+
+### 📁 File Structure Issues
+If you're missing files or having import errors:
+```bash
+# Verify all required files are present
+ls -la
+# Should show: main.py commands.py management.py social.py views.py trakt_api.py database.py config.py
+
+# Check Python path issues
+python -c "import commands, management, social, views, trakt_api, database, config"
+```
+
+## 🚀 Contributing
+
+The modular structure makes it easy to contribute:
+
+- **commands.py** - Add new slash commands
+- **management.py** - Enhance show/episode management
+- **social.py** - Add community features
+- **views.py** - Create new UI components
+- **trakt_api.py** - Extend API functionality
+
+Each module is focused and independent, making development and testing straightforward! 

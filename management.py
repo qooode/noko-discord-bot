@@ -3,8 +3,18 @@ from discord import app_commands
 from typing import Optional
 import requests
 from datetime import datetime
-from main import bot, trakt_api, db
-from commands import show_autocomplete
+
+# Initialize these as None and set them later
+bot = None
+trakt_api = None
+db = None
+
+def init_management(discord_bot, api, database):
+    """Initialize the management module with shared objects"""
+    global bot, trakt_api, db
+    bot = discord_bot
+    trakt_api = api
+    db = database
 
 class ShowProgressView(discord.ui.View):
     def __init__(self, show_result, user_id, access_token):
@@ -350,9 +360,26 @@ class EpisodeActionView(discord.ui.View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Management Commands
+async def show_autocomplete_local(interaction: discord.Interaction, current: str):
+    """Local autocomplete function to avoid circular imports"""
+    if len(current) < 2:
+        return []
+    try:
+        results = trakt_api.search_content(current, 'show')
+        choices = []
+        for result in results[:10]:
+            show = result['show']
+            title = show['title']
+            year = show.get('year', '')
+            choice_name = f"{title} ({year})" if year else title
+            choices.append(app_commands.Choice(name=choice_name[:100], value=title))
+        return choices
+    except:
+        return []
+
 @bot.tree.command(name="progress", description="View and manage your watching progress for a show")
 @app_commands.describe(show_name="Name of the show to check progress for")
-@app_commands.autocomplete(show_name=show_autocomplete)
+@app_commands.autocomplete(show_name=show_autocomplete_local)
 async def show_progress(interaction: discord.Interaction, show_name: str):
     await interaction.response.defer()
     
@@ -392,7 +419,7 @@ async def show_progress(interaction: discord.Interaction, show_name: str):
 
 @bot.tree.command(name="manage", description="Advanced management for shows - seasons, episodes, progress")
 @app_commands.describe(show_name="Name of the show to manage")
-@app_commands.autocomplete(show_name=show_autocomplete)
+@app_commands.autocomplete(show_name=show_autocomplete_local)
 async def manage_show(interaction: discord.Interaction, show_name: str):
     await interaction.response.defer()
     
@@ -556,7 +583,7 @@ async def continue_watching(interaction: discord.Interaction):
     season="Season number",
     episode="Episode number"
 )
-@app_commands.autocomplete(show_name=show_autocomplete)
+@app_commands.autocomplete(show_name=show_autocomplete_local)
 async def manage_episode(interaction: discord.Interaction, show_name: str, season: int, episode: int):
     await interaction.response.defer()
     

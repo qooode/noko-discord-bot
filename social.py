@@ -2,7 +2,18 @@ import discord
 from discord import app_commands
 from typing import Optional
 from datetime import datetime
-from main import bot, trakt_api, db
+
+# Initialize these as None and set them later
+bot = None
+trakt_api = None
+db = None
+
+def init_social(discord_bot, api, database):
+    """Initialize the social module with shared objects"""
+    global bot, trakt_api, db
+    bot = discord_bot
+    trakt_api = api
+    db = database
 
 @bot.tree.command(name="watching", description="See what you or another user is currently watching")
 @app_commands.describe(user="User to check (leave empty for yourself)")

@@ -2,9 +2,20 @@ import discord
 from discord import app_commands
 from typing import Optional, List
 import requests
-from main import bot, trakt_api, db
 from views import SearchView, ContentActionView, ReminderModal
 import config
+
+# Initialize these as None and set them later
+bot = None
+trakt_api = None
+db = None
+
+def init_commands(discord_bot, api, database):
+    """Initialize the commands module with shared objects"""
+    global bot, trakt_api, db
+    bot = discord_bot
+    trakt_api = api
+    db = database
 
 # Autocomplete functions
 async def show_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
