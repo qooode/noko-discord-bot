@@ -1134,11 +1134,17 @@ def register_content_commands():
             color=0x0099ff
         )
         
-        for reminder in reminders:
+        for reminder in reminders.values():
+            hours = reminder.get('hours_before', 1)
+            message = reminder.get('message', '')
+            
+            reminder_text = f"⏰ {hours} hour{'s' if hours != 1 else ''} before new episodes"
+            if message:
+                reminder_text += f"\n💬 \"{message}\""
+            
             embed.add_field(
                 name=f"📺 {reminder['show_name']}",
-                value=f"⏰ {reminder['hours_before']} hours before new episodes\n"
-                      f"💬 \"{reminder['message']}\"" if reminder.get('message') else "⏰ Default reminder",
+                value=reminder_text,
                 inline=False
             )
         

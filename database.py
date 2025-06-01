@@ -110,14 +110,16 @@ class Database:
             'private': total_users - public_users
         }
     
-    def add_reminder(self, discord_id: str, show_id: str, show_name: str) -> bool:
-        """Add a reminder for a show."""
+    def add_reminder(self, discord_id: str, show_id: str, show_name: str, hours_before: int = 1, custom_message: str = "") -> bool:
+        """Add a reminder for a show with enhanced settings."""
         try:
             if discord_id not in self.data['reminders']:
                 self.data['reminders'][discord_id] = {}
             
             self.data['reminders'][discord_id][show_id] = {
                 'show_name': show_name,
+                'hours_before': hours_before,
+                'message': custom_message,
                 'added_at': datetime.now().isoformat()
             }
             self._save_data()

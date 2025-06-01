@@ -252,15 +252,29 @@ class ReminderModal(discord.ui.Modal):
             await interaction.response.send_message("❌ Invalid time. Please enter a number between 0 and 24.", ephemeral=True)
             return
         
-        success = db.add_reminder(str(interaction.user.id), self.show_id, self.show_title)
+        # Store reminder with enhanced data
+        success = db.add_reminder(
+            str(interaction.user.id), 
+            self.show_id, 
+            self.show_title,
+            hours_before=hours,
+            custom_message=self.custom_message.value
+        )
         
         if success:
             embed = discord.Embed(
                 title="🔔 Enhanced Reminder Set",
                 description=f"**{self.show_title}**\n"
-                           f"⏰ You'll be notified {hours} hour(s) before new episodes\n"
+                           f"⏰ You'll be notified **{hours} hour{'s' if hours != 1 else ''}** before new episodes\n"
                            f"💬 Custom message: {self.custom_message.value or 'None'}",
                 color=0x00ff00
+            )
+            embed.add_field(
+                name="📅 How It Works",
+                value="• I'll check for new episodes every 6 hours\n"
+                      "• You'll get a DM when episodes are about to air\n"
+                      "• Use `/reminders` to manage your notifications",
+                inline=False
             )
         else:
             embed = discord.Embed(title="❌ Failed", description="Could not set reminder", color=0xff0000)
