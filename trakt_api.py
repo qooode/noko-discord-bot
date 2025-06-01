@@ -260,6 +260,20 @@ class TraktAPI:
             print(f"Error getting user history: {e}")
         return []
     
+    def get_user_history_authenticated(self, access_token: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """Get authenticated user's watch history with extended data."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/users/me/history",
+                params={'limit': limit, 'extended': 'full'},
+                headers=self.get_headers(access_token)
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error getting authenticated user history: {e}")
+        return []
+    
     def get_user_progress(self, username: str) -> List[Dict[str, Any]]:
         """Get user's show progress."""
         try:
@@ -439,4 +453,180 @@ class TraktAPI:
             return response.status_code == 200
         except Exception as e:
             print(f"Error unmarking season: {e}")
-        return False 
+        return False
+    
+    def validate_arena_challenge(self, access_token: str, challenge: Dict[str, Any], challenge_start_time: float) -> Dict[str, Any]:
+        """Validate if user completed arena challenge based on their Trakt history."""
+        try:
+            # Get recent watch history since challenge started
+            history = self.get_user_history_authenticated(access_token, 50)
+            
+            if not history:
+                return {'valid': False, 'reason': 'Unable to fetch watch history from Trakt'}
+            
+            # Filter to movies watched after challenge started
+            challenge_movies = []
+            for item in history:
+                if item.get('action') == 'watch' and item.get('type') == 'movie':
+                    try:
+                        # Parse watch time with better error handling
+                        watched_at_str = item.get('watched_at', '')
+                        if not watched_at_str:
+                            continue
+                        
+                        # Handle different timezone formats
+                        if watched_at_str.endswith('Z'):
+                            watched_at_str = watched_at_str.replace('Z', '+00:00')
+                        
+                        watched_at = datetime.fromisoformat(watched_at_str)
+                        if watched_at.timestamp() >= challenge_start_time:
+                            challenge_movies.append(item)
+                    except (ValueError, TypeError) as e:
+                        print(f"Error parsing watch time for item: {e}")
+                        continue
+            
+            if not challenge_movies:
+                return {'valid': False, 'reason': 'No movies watched since challenge started'}
+            
+            # Check each movie against challenge criteria
+            for movie_item in challenge_movies:
+                movie = movie_item.get('movie', {})
+                
+                # If basic movie data is missing detailed info, fetch it
+                if not self._has_extended_data(movie):
+                    movie = self._fetch_extended_movie_data(movie)
+                
+                if movie and self._movie_matches_challenge(movie, challenge):
+                    return {
+                        'valid': True,
+                        'movie': movie,
+                        'watched_at': movie_item['watched_at']
+                    }
+            
+            return {'valid': False, 'reason': 'No movies found that match the challenge criteria'}
+            
+        except Exception as e:
+            print(f"Error validating arena challenge: {e}")
+            return {'valid': False, 'reason': f'Validation system error. Please try again in a few minutes.'}
+
+    def _has_extended_data(self, movie: Dict[str, Any]) -> bool:
+        """Check if movie has the extended data needed for validation."""
+        required_fields = ['genres', 'rating', 'runtime', 'language', 'votes']
+        return any(field in movie for field in required_fields)
+
+    def _fetch_extended_movie_data(self, movie: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Fetch extended movie data if not available in history."""
+        try:
+            movie_ids = movie.get('ids', {})
+            trakt_id = movie_ids.get('trakt')
+            
+            if trakt_id:
+                return self.get_movie_info(str(trakt_id))
+        except Exception as e:
+            print(f"Error fetching extended movie data: {e}")
+        
+        return movie  # Return original if fetch fails
+
+    def _movie_matches_challenge(self, movie: Dict[str, Any], challenge: Dict[str, Any]) -> bool:
+        """Check if a movie matches the challenge criteria with robust error handling."""
+        try:
+            challenge_type = challenge.get('type')
+            target = challenge.get('target')
+            
+            if not challenge_type or target is None:
+                return False
+            
+            if challenge_type == 'genre':
+                genres = movie.get('genres', [])
+                if not genres:
+                    return False
+                genre_names = [g.lower() if isinstance(g, str) else str(g).lower() for g in genres]
+                return target.lower() in genre_names
+                
+            elif challenge_type == 'decade':
+                year = movie.get('year')
+                if not isinstance(year, int) or year <= 0:
+                    return False
+                    
+                if target == '1990s':
+                    return 1990 <= year <= 1999
+                elif target == '1980s':
+                    return 1980 <= year <= 1989
+                elif target == '2000s':
+                    return 2000 <= year <= 2009
+                elif target == '2010s':
+                    return 2010 <= year <= 2019
+                elif target == '2020s':
+                    return 2020 <= year <= 2029
+                    
+            elif challenge_type == 'rating':
+                rating = movie.get('rating')
+                if rating is None or not isinstance(rating, (int, float)):
+                    return False
+                return float(rating) >= target
+                
+            elif challenge_type == 'runtime':
+                runtime = movie.get('runtime')
+                if runtime is None or not isinstance(runtime, (int, float)):
+                    return False
+                return int(runtime) < target  # For "under X minutes" challenges
+                
+            elif challenge_type == 'classic':
+                year = movie.get('year')
+                if not isinstance(year, int) or year <= 0:
+                    return False
+                return year < target
+                
+            elif challenge_type == 'language':
+                language = movie.get('language', '').lower()
+                if target == 'non-english':
+                    return language != 'en' and language != ''
+                else:
+                    return language == target.lower()
+                    
+            elif challenge_type == 'obscure':
+                votes = movie.get('votes')
+                if votes is None or not isinstance(votes, (int, float)):
+                    return False
+                return int(votes) < target
+                
+        except Exception as e:
+            print(f"Error in movie matching: {e}")
+            return False
+            
+        return False
+
+    def debug_recent_movies(self, access_token: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Debug method to see what movie data is available for validation."""
+        try:
+            history = self.get_user_history_authenticated(access_token, limit)
+            debug_info = []
+            
+            for item in history:
+                if item.get('action') == 'watch' and item.get('type') == 'movie':
+                    movie = item.get('movie', {})
+                    
+                    # Get extended data if needed
+                    if not self._has_extended_data(movie):
+                        movie = self._fetch_extended_movie_data(movie)
+                    
+                    debug_info.append({
+                        'title': movie.get('title', 'Unknown'),
+                        'year': movie.get('year'),
+                        'watched_at': item.get('watched_at'),
+                        'has_genres': bool(movie.get('genres')),
+                        'genres': movie.get('genres', []),
+                        'has_rating': movie.get('rating') is not None,
+                        'rating': movie.get('rating'),
+                        'has_runtime': movie.get('runtime') is not None,
+                        'runtime': movie.get('runtime'),
+                        'has_language': bool(movie.get('language')),
+                        'language': movie.get('language'),
+                        'has_votes': movie.get('votes') is not None,
+                        'votes': movie.get('votes')
+                    })
+            
+            return debug_info
+        except Exception as e:
+            print(f"Error in debug method: {e}")
+            return [] 

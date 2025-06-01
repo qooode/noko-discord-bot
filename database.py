@@ -342,9 +342,13 @@ class Database:
         try:
             if discord_id in self.data['arena']['participants']:
                 challenge = self.data['arena'].get('current_challenge', {})
-                challenge_id = challenge.get('name', 'unknown')
+                challenge_name = challenge.get('name', 'unknown')
+                challenge_end_time = challenge.get('end_time', 0)
                 
-                # Check if already completed this challenge
+                # Create unique challenge ID with name and end time
+                challenge_id = f"{challenge_name}_{challenge_end_time}"
+                
+                # Check if already completed this specific challenge instance
                 participant = self.data['arena']['participants'][discord_id]
                 completed_challenges = participant.get('completed_challenges', [])
                 
@@ -365,6 +369,22 @@ class Database:
                 return True
         except Exception as e:
             print(f"Error completing challenge: {e}")
+        return False
+    
+    def has_completed_arena_challenge(self, discord_id: str, challenge_name: str) -> bool:
+        """Check if user has already completed the current specific challenge instance."""
+        try:
+            if discord_id in self.data.get('arena', {}).get('participants', {}):
+                # Get current challenge end time to create unique ID
+                current_challenge = self.data.get('arena', {}).get('current_challenge', {})
+                challenge_end_time = current_challenge.get('end_time', 0)
+                challenge_id = f"{challenge_name}_{challenge_end_time}"
+                
+                participant = self.data['arena']['participants'][discord_id]
+                completed_challenges = participant.get('completed_challenges', [])
+                return challenge_id in completed_challenges
+        except Exception as e:
+            print(f"Error checking completed challenge: {e}")
         return False
     
     def reset_arena(self) -> bool:
@@ -471,4 +491,34 @@ class Database:
             return True
         except Exception as e:
             print(f"Error cleaning up arena: {e}")
-            return False 
+            return False
+
+    def get_challenge_completions(self) -> List[Dict[str, Any]]:
+        """Get list of participants who completed the current challenge."""
+        try:
+            current_challenge = self.data.get('arena', {}).get('current_challenge', {})
+            if not current_challenge:
+                return []
+            
+            challenge_name = current_challenge.get('name', '')
+            challenge_end_time = current_challenge.get('end_time', 0)
+            challenge_id = f"{challenge_name}_{challenge_end_time}"
+            
+            completions = []
+            participants = self.data.get('arena', {}).get('participants', {})
+            
+            for discord_id, participant in participants.items():
+                completed_challenges = participant.get('completed_challenges', [])
+                if challenge_id in completed_challenges:
+                    completions.append({
+                        'discord_id': discord_id,
+                        'username': participant['username'],
+                        'team': participant.get('team', 'No Team'),
+                        'points': participant.get('points', 0),
+                        'challenges_won': participant.get('challenges_won', 0)
+                    })
+            
+            return completions
+        except Exception as e:
+            print(f"Error getting challenge completions: {e}")
+            return [] 

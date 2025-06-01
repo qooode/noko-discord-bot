@@ -47,7 +47,9 @@ A **powerful and interactive** Discord bot for managing your Trakt.tv account wi
 - **Challenge Variety** - Genre Master, Decade Dive, Rating Rush, Speed Run, and more
 - **Auto-Balancing** - Late joiners are automatically balanced into teams
 - **Point System** - Earn points and climb leaderboards through movie watching
-- **Honor System** - Complete challenges through self-reporting with basic validation
+- **Trakt.tv Validation** - Automatic validation against your actual Trakt watch history
+- **Public Profile Required** - Only users with public Trakt profiles can participate
+- **Real-time Progress Tracking** - See team standings and challenge completion status
 - **Weekly Resets** - Fresh competition cycles keep the arena exciting
 - **Persistent State** - Arena survives bot restarts and maintains ongoing battles
 - **Admin Controls** - Moderators can reset arena and manually start challenges
@@ -178,10 +180,27 @@ tail -f bot.log
   - Browse results with ◀️ ▶️ buttons
   - Select items from dropdown for detailed info
   - One-click mark watched, add to watchlist, set reminders
+- `/random` - **Smart random recommendations** with advanced filtering
+  - Filter by content type, genre, minimum rating
+  - Get random picks from your watchlist
+  - Interactive "get another" button for endless discovery
+- `/top` - **Curated lists of top-rated content** with filtering
+  - Browse Highest Rated, Most Popular, Trending Now, Most Watched
+  - Filter by genre, year, and content type
+  - Paginated display with rankings and detailed info
+  - Random pick from curated lists
 - `/info <show/movie>` - Detailed info **with action buttons**
+- `/calendar` - **Visual episode calendar** with multiple viewing modes
+  - Compact list, detailed view, today only, weekly view
+  - Smart date formatting and episode information
+  - Interactive navigation between different view types
 
 ### **🎬 Content Management**
 - `/watched <show/movie>` - Mark as watched (with autocomplete)
+- `/unwatch <show/movie>` - **Remove from watch history** with confirmation
+  - Smart validation against your actual watch history
+  - Safety confirmation system with detailed warnings
+  - Visual feedback and next steps guidance
 - `/watchlist <show/movie>` - Add to watchlist (with autocomplete)
 
 ### **📺 Advanced Show Management**
@@ -240,6 +259,9 @@ tail -f bot.log
   - Manually trigger new random challenge
   - Override automatic rotation
   - Control arena flow
+- `/arena-teams` - **View Arena teams and progress** 🛡️
+  - Detailed team information and progress
+  - Team rankings and statistics
 
 ### **💡 Help & Discovery**
 - `/help` - **Complete command guide** with examples and getting started tips
@@ -291,6 +313,47 @@ After getting show/movie info:
 🖼️ [Poster] Better Call Saul
 S6E13: Waterworks
 ⭐ 9.0/10 • ⏱️ 63 min
+```
+
+### **Top Content Curated Lists**
+```
+🏆 Highest Rated • Horror • Page 1/3
+Top-rated content on Trakt.tv
+
+🥇 #1
+The Exorcist (1973) • Movie
+⭐ 8.0/10 (15,423 votes)
+A mother and daughter are tormented by...
+
+🥈 #2  
+Hereditary (2018) • Movie
+⭐ 7.3/10 (22,198 votes)
+A grieving family is haunted by tragedy...
+
+🥉 #3
+The Conjuring (2013) • Movie  
+⭐ 7.5/10 (18,756 votes)
+Paranormal investigators help a family...
+
+[◀️ Previous] [▶️ Next] [🎲 Random from List]
+```
+
+### **Unwatch Confirmation Interface**
+```
+⚠️ Confirm Removal
+Are you sure you want to remove Breaking Bad from your watch history?
+
+📺 TV Show
+Breaking Bad (2008)
+⚠️ This will remove ALL episodes from your watched history.
+Found 62 entries in recent history.
+
+⚠️ Warning
+• This action cannot be undone
+• Your ratings and reviews will remain
+• The item will be removed from your watched history
+
+[✅ Yes, Remove] [❌ Cancel]
 ```
 
 ### **Custom Reminder Modal**
@@ -360,43 +423,43 @@ Aggregated activity from 12 public members
 
 ### **Arena Movie Challenge Interface**
 ```
-🎬⚔️ ARENA - Movie Challenge Hub
-Daily movie duels • Team battles • Epic challenges
+🎬🏟️ ARENA - Movie Challenge Hub
+Daily movie challenges • Team competitions • Epic rewards
 
 🎯 Today's Challenge: Genre Master
 Watch any Horror movie you haven't seen
 ⏰ Ends in 18 hours
 🏆 Reward: 10 points
 
-⚔️ Arena Status
-👥 12 gladiators ready
-🛡️ 3 teams formed  
+🏟️ Arena Status
+👥 12 players ready
+👥 3 teams formed  
 🔥 8 active today
 
-🏆 Top Gladiators
+🏆 Top Players
 🥇 movie_master • 85 pts
 🥈 film_buff • 72 pts  
 🥉 cinema_queen • 68 pts
 
-[⚔️ Join Arena] [🛡️ Team Setup] [🏆 Leaderboard]
+[🏟️ Join Arena] [👥 Team Setup] [🏆 Leaderboard]
 ```
 
 ### **Arena Team Formation**
 ```
-🛡️ Team Formation Vote
-12 gladiators ready! How should we form teams?
+👥 Team Formation Vote
+12 players ready! How should we form teams?
 
 ⚖️ Voting Rules
 • Majority vote decides team size
 • After teams form, vote to start challenges  
 • Arena stays open for late joiners!
 
-[👥 Teams of 2] [🛡️ Teams of 3] [⚔️ Teams of 4+]
+[👥 Teams of 2] [👥 Teams of 3] [👥 Teams of 4+]
 
-🛡️ Teams Formed!
+👥 Teams Formed!
 Teams of 3 won the vote!
 
-⚔️ Battle Teams
+👥 Competition Teams
 Team 1: alice_movies, bob_cinema, charlie_films
 Team 2: diana_watch, eve_binge, frank_movie  
 Team 3: grace_film, henry_show, iris_tv
@@ -405,22 +468,57 @@ Team 4: jack_watch, kelly_cinema
 [🚀 START ARENA]
 ```
 
-### **Challenge Completion**
+### **Challenge Completion with Validation**
 ```
+🔍 Checking your Trakt watch history...
+
 🏆 Challenge Completed!
 movie_master completed: Genre Master
 
-🎯 Challenge  
+🎯 Challenge
 Watch any Horror movie you haven't seen
+
+🎬 Validated Movie
+The Conjuring (2013)
+⭐ 7.5/10 on Trakt
 
 📊 Rewards
 🎬 +10 points
 🏆 Total: 85 points
 🥇 Wins: 8
 
-🛡️ Team: Team 1
+👥 Team: Team 1
 
-Honor system - thanks for playing fairly! ��
+✅ Validated against Trakt.tv data!
+```
+
+### **Arena Teams Overview**
+```
+👥 Arena Teams Overview
+12 players across 3 teams
+
+🎯 Current Challenge: Genre Master
+Watch any Horror movie you haven't seen
+⏰ 18h remaining • 🏆 10 points
+
+🏆 Team Rankings
+🥇 Team 1 • 145 pts (8 wins)
+   👥 4 members • 📊 36.3 avg
+
+🥈 Team 2 • 132 pts (7 wins)
+   👥 4 members • 📊 33.0 avg
+
+🥉 Team 3 • 98 pts (5 wins)
+   👥 4 members • 📊 24.5 avg
+
+🥇 Team 1 Details
+👑 movie_master • 85 pts • 8 wins
+🎯 alice_cinema • 32 pts • 3 wins
+🎯 bob_films • 28 pts • 2 wins
+
+✅ Current Challenge Progress
+👥 Team 1: movie_master, alice_cinema
+👥 Team 2: charlie_watch
 ```
 
 ## 🖼️ Visual Content Features
@@ -547,4 +645,4 @@ The modular structure makes it easy to contribute:
 - **views.py** - Create new UI components
 - **trakt_api.py** - Extend API functionality
 
-Each module is focused and independent, making development and testing straightforward! 
+Each module is focused and independent, making development and testing straightforward!
